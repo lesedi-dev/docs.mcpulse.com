@@ -1,0 +1,52 @@
+---
+title: "Skills"
+description: "Install MCPulse as a reusable skill for AI agents"
+---
+
+You can install MCPulse as a reusable skill for AI agents that support the `skills` ecosystem. This gives your agent a versioned workflow guide for reading MCPulse instead of leaving it to infer how the pieces fit together each time.
+
+## Install
+
+```bash
+npx skills add getmcpulse/skills --skill mcpulse
+```
+
+## What the skill covers
+
+The `mcpulse` skill helps your agent:
+
+* understand the shape of an account — MCP → tool, session and call — and why a tool exists from the moment a client initialises rather than from its first call
+* narrow `get_overview` with `metrics` instead of pulling the whole overview to read one field out of it
+* name an MCP directly rather than spending a `list_mcps` round trip first, and recover correctly when a name is unknown or ambiguous
+* prefer `last_days` over computing dates, and reserve `from`/`to` for a named calendar period
+* follow the diagnostic order — [insights](/insights/overview) first, rank by calls × failure rate, then read the [outcome breakdown](/metrics/outcomes), which separates a schema problem from a [silent-empties](/insights/silent-empties) problem from a description problem
+* leave alone what the API already computed: deltas, which direction counts as an improvement, cost conversion, and insight verdicts
+* say "as of yesterday" when quoting the three metrics the [nightly pass](/api/concepts/nightly-pass) computes
+
+It also names the behaviours that read as failures but are not: a `null` first-call rate that means *not yet computed* rather than zero, [sessions and cost blanked](/metrics/overview) under a tool filter, a [p95 that is a bucket edge](/metrics/latency) rather than a value, empty [tool pairs](/metrics/tool-pairs), insights suppressed below 20 calls, and a "dead" tool that is simply outside the date range.
+
+## Why use a skill
+
+Without one, your agent has to work out MCPulse's workflows from tool descriptions alone. A description says what one tool does; it cannot say which one to reach for, or what a `null` means. With a skill you give it:
+
+* a stable reference for how the product fits together
+* use-case driven guidance instead of tool-by-tool guessing
+* explicit caveats for what the connector cannot do and should hand back to the dashboard
+* a versioned source of truth you can update as MCPulse evolves
+
+## Repository
+
+The public source lives here:
+
+* [MCPulse Skills on GitHub](https://github.com/getmcpulse/skills)
+
+## Install notes
+
+* After installing, restart your AI tool if it does not pick up the new skill immediately
+* Pair it with the [MCP connector](/mcp/connect) — the skill explains the workflows, the connector executes them
+* The connector is [read-only](/mcp/overview). The skill says so, so your agent stops looking for a write tool instead of inventing one
+* The skills ecosystem is supported by Claude Code and claude.ai. If you use MCPulse through another client, the connector still ships the essentials in its own tool descriptions
+
+## Documentation index
+
+Agents can discover every page in these docs at [docs.mcpulse.com/llms.txt](https://docs.mcpulse.com/llms.txt).

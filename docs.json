@@ -23,6 +23,10 @@
   "navbar": {
     "links": [
       {
+        "label": "npm",
+        "href": "https://www.npmjs.com/package/@mcpulse/sdk"
+      },
+      {
         "label": "GitHub",
         "href": "https://github.com/getmcpulse"
       }
@@ -209,6 +213,7 @@
               "mcp/auth",
               "mcp/tools",
               "mcp/playbooks",
+              "mcp/skills",
               "mcp/troubleshooting"
             ]
           }
@@ -229,8 +234,7 @@
   },
   "footer": {
     "socials": {
-      "github": "https://github.com/getmcpulse",
-      "npm": "https://www.npmjs.com/package/@mcpulse/sdk"
+      "github": "https://github.com/getmcpulse"
     }
   }
 }
