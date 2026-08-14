@@ -1,0 +1,49 @@
+---
+title: "Roles and permissions"
+description: "Three roles, account-wide. What each can do, and why enforcement lives in the API."
+---
+
+Three roles. There is no per-MCP role — a role applies across the whole account.
+
+| | Read MCPs and metrics | Create, rename, delete an MCP · mint or revoke keys · edit the company | Change roles · remove people | Delete the account |
+|---|---|---|---|---|
+| **member** | ✓ | | | |
+| **admin** | ✓ | ✓ | ✓ | |
+| **owner** | ✓ | ✓ | ✓ + may act on another owner | ✓ |
+
+## Reads stay open to the whole team
+
+Anyone who can see the account sees its numbers. Only writing needs rank.
+
+An analytics product nobody on the team can read is not doing its job, so there is no "can this member see this MCP" question anywhere in the product.
+
+## Deleting the account stops at owner
+
+Everything in the third column removes one thing and can be done again. [Deleting the account](/account/delete) removes the account, every MCP in it and every teammate's access in a single statement, with no soft delete to come back from. That is why it sits one rank higher.
+
+## Enforcement is in the API, not the interface
+
+This is worth stating plainly because the opposite was true once and it was wrong.
+
+The dashboard hides controls your role does not permit. That is a **courtesy**, not a permission — every guard is also enforced server-side, on the endpoint. A member calling the API directly gets a `403`, not a rename.
+
+The [MCP server](/mcp/overview) gets only the read gate, which is why it registers no write tools at all.
+
+## Three rules that are easy to get wrong
+
+**You cannot act on someone who outranks you.** An admin does not outrank an owner. The dashboard hides the remove button on an owner's row; the guard is what makes it true.
+
+**You cannot act on yourself.** Changing your own role and removing yourself are different operations, and none of these are them.
+
+**The last owner cannot be demoted or removed.** An account with no owner cannot be administered by anyone — no invites, no role changes, no way back. Cheaper to refuse than to repair.
+
+Only **active** owners count for that last rule. An invited owner has never signed in and cannot administer anything, so counting them would let the last real owner demote themselves and leave the account waiting on someone who may never accept.
+
+## Invited members have roles too
+
+An invitation carries the role it was created with, and that role can be changed or the row removed before the person ever arrives — the operations key on the **member row**, not on the user, precisely so the invited half of the list stays manageable.
+
+## Related
+
+- [Invite someone](/team/invite)
+- [Manage the team](/team/manage)

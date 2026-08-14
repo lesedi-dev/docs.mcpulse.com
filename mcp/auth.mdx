@@ -1,0 +1,85 @@
+---
+title: "MCP authentication"
+description: "MCPulse is an OAuth 2.0 resource server. What the discovery flow does, and what a token is checked for."
+---
+
+MCPulse is an OAuth 2.0 **resource server**, and nothing more. It does three things: answer an unauthenticated call with a pointer to its metadata, publish that metadata naming the authorization server, and reject tokens not issued for it.
+
+`/authorize`, `/token`, client registration and the consent screen all belong to **Supabase**, whose OAuth 2.1 server handles them.
+
+## The flow
+
+<Steps>
+  <Step title="The client calls /mcp with no token">
+    It gets a `401` carrying a `WWW-Authenticate` header:
+
+    ```
+    WWW-Authenticate: Bearer resource_metadata="https://…/.well-known/oauth-protected-resource"
+    ```
+
+    That header is the **entire discovery mechanism**. A bare `401` would be a dead end, and the connect flow would die with nothing to show you.
+  </Step>
+  <Step title="The client reads the metadata">
+    RFC 9728. Served unauthenticated by necessity — the client reads it *because* it does not have a token.
+
+    ```json
+    {
+      "resource": "https://…/mcp",
+      "authorization_servers": ["https://<project>.supabase.co/auth/v1"],
+      "bearer_methods_supported": ["header"],
+      "scopes_supported": ["openid", "email", "offline_access"],
+      "resource_name": "MCPulse"
+    }
+    ```
+
+    `authorization_servers` is the only load-bearing field. Both the root and the path-suffixed well-known paths answer, since clients probe either.
+  </Step>
+  <Step title="The client registers and sends you to authorize">
+    Dynamic client registration, then the authorization-code flow with PKCE, all handled by Supabase.
+  </Step>
+  <Step title="You approve on the consent screen">
+    In the MCPulse dashboard, at `/oauth/consent`. One decision, no navigation around it.
+  </Step>
+  <Step title="The client gets a token">
+    An access token and — because `offline_access` is requested — a **refresh token**.
+  </Step>
+</Steps>
+
+<Note>
+  `offline_access` is the scope that is easy to leave out and expensive to. Without it no refresh token is issued, the access token expires after an hour, and the connection dies — presenting as Claude spontaneously losing access to MCPulse once an hour and needing re-approval.
+</Note>
+
+## What a token is checked for
+
+The signature check is the same one the REST API does — same project, same JWKS, same `ES256`. What differs is the audience.
+
+A token must:
+
+- be signed by the Supabase project and verify against its JWKS
+- carry the expected issuer
+- carry an audience of either this resource's URL **or** `authenticated`
+- have a `sub` claim
+- have an `exp` claim — a token with no expiry cannot be revoked by waiting
+
+## Why `authenticated` is accepted
+
+**Supabase does not implement RFC 8707.** Its authorize endpoint takes no `resource` parameter, and every access token it issues — OAuth or browser session alike — carries `aud: "authenticated"`.
+
+So accepting that audience is not a testing convenience; it is the only path that authenticates anything. Tightening it to require the resource URL would lock every real client out, which is worth knowing before anyone "fixes" it.
+
+The cost, stated plainly: audience alone cannot distinguish a token issued for MCPulse from any other token this project mints. Today that is a distinction without a difference — the project serves one product, and a token only exists after a human approved it on our own consent screen. It would stop being harmless the day this project issued tokens for a second purpose, and the fix then is a scope or client allow-list, not a wider audience check.
+
+What is still refused is a token addressed to a **different** resource entirely — the confused-deputy case — which costs nothing to keep.
+
+## What a token can do
+
+Read the signed-in account's analytics. That is the whole scope, and it is bounded by the tools that exist rather than by a claim: [six read-only tools](/mcp/tools), no writes.
+
+## Revoking access
+
+Revoke the client from your Supabase-managed sessions, or disconnect it in your MCP client. Ingest keys are unrelated and unaffected — see [Authentication](/authentication).
+
+## Related
+
+- [Connect](/mcp/connect)
+- [Troubleshooting](/mcp/troubleshooting)

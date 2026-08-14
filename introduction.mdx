@@ -1,0 +1,82 @@
+---
+title: "Introduction"
+description: "Analytics for MCP servers. See whether your tools actually work for the models calling them — retries, empty answers, schema cost and first-call success."
+---
+
+You publish an MCP server and you can see nothing. Not how many people use it, not which tools get called, not whether the model understands your tool descriptions, not what your server costs the people running it. The directories report none of this.
+
+MCPulse answers that. An npm package installed **inside your own server** records what each tool call did — how long it took, how it ended, how big the answer was — and posts it to MCPulse. Two lines to install, no proxy, no change to your URL, and no arguments or results ever leave your process.
+
+In MCPulse, everything hangs off an **MCP**: one tracked server. You create an MCP, it gives you an ingest key, you wrap your server with that key, and the overview fills in. The sidebar gives you **MCPs** and **Settings**, and nothing else.
+
+## Start with your goal
+
+<CardGroup cols={2}>
+  <Card title="Instrument your first server" icon="rocket" href="/quickstart">
+    Create an MCP, mint a key, wrap your server, and see live numbers.
+  </Card>
+
+  <Card title="Understand first-call success" icon="bullseye" href="/metrics/first-call-success">
+    The headline metric: did the model get what it wanted on the first try?
+  </Card>
+
+  <Card title="Find what is wrong" icon="triangle-exclamation" href="/insights/overview">
+    Five rules that name a tool, a number, and a consequence.
+  </Card>
+
+  <Card title="Cut what your server costs" icon="coins" href="/guides/cut-context-cost">
+    Heavy payloads and dead tools, priced in tokens and dollars.
+  </Card>
+
+  <Card title="Use the REST API" icon="code" href="/api/introduction">
+    Every number the dashboard shows, computed server-side and available to you.
+  </Card>
+
+  <Card title="Use MCPulse with AI (MCP)" icon="robot" href="/mcp/overview">
+    Ask Claude how your server is doing, and have it read the real figures.
+  </Card>
+</CardGroup>
+
+## How MCPulse works
+
+<Steps>
+  <Step title="Create an MCP">
+    One MCP per server you want to track. Creating one opens it and hands you the install steps.
+  </Step>
+  <Step title="Mint an ingest key">
+    A key looks like `mp_live_…`, belongs to exactly one MCP, and is shown once at creation.
+  </Step>
+  <Step title="Wrap your server">
+    `watch(server, { key: process.env.MCPULSE_KEY })`, after your tools are registered. That is the whole integration.
+  </Step>
+  <Step title="Data arrives">
+    Your server sends a startup payload with the tool list, then one payload per tool call. Batched every 5 seconds or 30 calls, whichever comes first.
+  </Step>
+  <Step title="Read the overview">
+    Calls, first-call success, p95 latency and cost per session, each against the previous window of equal length.
+  </Step>
+  <Step title="Act on the insights">
+    Low first-call success, heavy payloads, silent empties, dead tools, slow tools — each with the number that fired it.
+  </Step>
+</Steps>
+
+## What gets recorded, and what never does
+
+Every payload carries sizes and hashes only.
+
+| Recorded | Never recorded |
+|---|---|
+| Tool name, client name, session id | Tool arguments |
+| Start time, duration, outcome | Tool results |
+| Response size in bytes | Anything a user typed |
+| A 12-character hash of the arguments | The arguments the hash was made from |
+
+There is no option that turns this off, because the guarantee is only worth something if it cannot be switched off. See [Security & data access](/security).
+
+## The sixteen metrics
+
+Counted live as calls arrive: [calls per tool](/metrics/calls), calls per day, [which client](/metrics/clients), crashes, tool errors, bad arguments, [empty answers](/metrics/empty-results), [speed](/metrics/latency), [result size](/metrics/response-size), [sessions](/metrics/sessions), [cost per session](/metrics/cost).
+
+Computed by the [nightly pass](/api/concepts/nightly-pass): [retries](/metrics/first-call-success), first-call success, [tool pairs](/metrics/tool-pairs).
+
+From the startup payload: [schema size](/metrics/schema-size), [dead tools](/tools/dead).

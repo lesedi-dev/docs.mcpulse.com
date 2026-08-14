@@ -1,0 +1,70 @@
+---
+title: "Improve first-call success"
+description: "Find the tool costing you the most retries, work out which of the three causes it is, and confirm the fix."
+---
+
+[First-call success](/metrics/first-call-success) is the share of calls that got what the model wanted on the first try. When it is low, the model is calling your tool, not getting what it wanted, and calling it again.
+
+## 1. Find the tool worth fixing
+
+Open [tool health](/tools/health) over a range wide enough to be meaningful — 30 days is the default and usually right.
+
+Sort by calls. Work down that column, not across it: a tool with 900 calls at 60% is losing you far more than one with 30 calls at 20%.
+
+The [insights panel](/insights/overview) does this ordering for you — it sorts by severity then by the size of the figure that fired.
+
+## 2. Work out which problem you have
+
+Open the [tool page](/tools/detail) and read the **outcome breakdown** first. It separates three different problems that all look identical from the first-call rate alone.
+
+<AccordionGroup>
+  <Accordion title="High bad_args — the model cannot construct valid arguments">
+    Your handler never ran. This is a **schema** problem.
+
+    - List enum values explicitly rather than describing them in prose.
+    - Put the expected format in the description of any date, id or code field.
+    - Name arguments after what they mean: `status` beats `state_flag`.
+    - Make genuinely optional things optional. A required field the model cannot know is a guaranteed failure.
+  </Accordion>
+
+  <Accordion title="High empty — the tool succeeds at doing nothing">
+    This is the quietest of the three, and often the easiest fix. See [Silent empties](/insights/silent-empties).
+
+    The single highest-value change: **return an error where an error happened.** An id that does not exist is not "no results". `isError: true` with "no customer with id 4821 — try search_customers" turns a blind retry into a correct second call.
+  </Accordion>
+
+  <Accordion title="Mostly ok, still retried — the answer is not what was wanted">
+    The tool works, returns something, and the model tries again anyway. This is a **description** problem.
+
+    - Does the description say what question the tool answers, or what operation it performs?
+    - Does the result contain what the model needs to proceed, or does it force another call? Check the [pairs](/metrics/tool-pairs).
+    - Is another tool a better fit, and this one is winning by name alone?
+  </Accordion>
+</AccordionGroup>
+
+## 3. Check what it gets called with
+
+The [follows](/metrics/tool-pairs) panel on the tool page shows which tools sit either side of it in a session.
+
+A tool that is nearly always preceded by one particular search is usually gathering an argument it cannot get any other way. That is a shape problem, not a wording problem: either return the needed value from the first tool, or accept the value the model actually has.
+
+## 4. Ship one change
+
+One at a time. Two changes in a deploy means an ambiguous result.
+
+## 5. Confirm it
+
+The metric lags a day, so a change deployed today is measurable the day after tomorrow at the earliest.
+
+Set the range to the week after the deploy and read the delta on the first-call card — it compares against the preceding window of equal length automatically. Read the **retries** figure beside it too: retries falling while calls stay flat is the cleanest signal that the fix landed.
+
+## What not to do
+
+**Don't split the tool into three.** Three struggling tools, three [schemas](/metrics/schema-size) in every session, and three chances for the model to pick wrong instead of one.
+
+**Don't loosen the schema to make `bad_args` go away.** That converts a loud failure into a [silent empty](/metrics/empty-results), which is strictly worse.
+
+## Related
+
+- [First-call success](/metrics/first-call-success)
+- [Low first-call insight](/insights/low-first-call)

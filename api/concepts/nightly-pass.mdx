@@ -1,0 +1,63 @@
+---
+title: "The nightly pass"
+description: "Three metrics are computed after the fact at 02:00 UTC. What that means for the numbers you read."
+---
+
+Thirteen of the sixteen metrics are counted live, as payloads arrive. Three are not:
+
+- [**Retries**](/metrics/first-call-success)
+- **First-call success**
+- [**Tool pairs**](/metrics/tool-pairs)
+
+All three are questions about a **sequence** rather than about a call, so none can be answered at the moment a call is recorded.
+
+## What it does
+
+At **02:00 UTC**, for the previous day, per MCP: walk each session's events ordered by `started_at`, apply the retry rule, update `tool_days.retries` and `tool_days.first_call_ok`, and populate `tool_pairs` from consecutive calls.
+
+The retry rule is on [First-call success](/metrics/first-call-success): the same tool called twice within one session inside 30 seconds, with a **different** `args_hash`.
+
+## nightly_as_of
+
+Every metric response carries it: the **last day the pass has covered**, or `null` when it has covered none of the range.
+
+```json
+{ "range": { "from": "2026-07-16", "to": "2026-08-14" }, "nightly_as_of": "2026-08-13" }
+```
+
+Use it to label the three lagging figures. The dashboard shows them as *as of yesterday*.
+
+## Today is excluded from the denominator, not just the numerator
+
+This is the part worth understanding, because it explains a number that would otherwise look wrong.
+
+`first_call_ok` is zero on days the pass has not walked. If today's calls were in the denominator, the headline metric would sag through the day and jump back at 02:00 — a number that moves on its own is worse than one that is a day old.
+
+So the denominator is **calls on covered days only**. A range that is entirely today has no rate at all.
+
+## Three states, not two
+
+| Situation | Value | Renders as |
+|---|---|---|
+| No calls in range | `0` | `0%` — nothing happened is a complete answer |
+| Calls exist, pass has covered them | the rate | the rate |
+| Calls exist, pass has not reached them | `null` | *not yet computed* |
+
+That third case is the one place in MCPulse where "not yet" is honest rather than evasive. A zero there would claim every call failed.
+
+In the per-day sparkline the same three states apply: a day with no calls plots zero and keeps the line continuous, and a day the pass has not reached is `null` so the line **breaks** rather than inventing a dip.
+
+## First day
+
+On day one, all three read as not yet computed. Insights that depend on first-call success do not fire. This is normal.
+
+## Events exist so they can be deleted
+
+The pass reads `events`, the raw per-call rows. Nothing else does — every dashboard number comes from the daily rollups.
+
+That separation is deliberate: events pile into the millions, rollups stay tiny and aggregate correctly across any range. A 30-day cleanup of `events` is built and deliberately not switched on at launch, and it must run after the nightly pass.
+
+## Related
+
+- [First-call success](/metrics/first-call-success)
+- [Date ranges](/api/concepts/date-ranges)

@@ -1,0 +1,60 @@
+---
+title: "Insights"
+description: "Five rules that name a tool, a number and a consequence. The thresholds, the minimum sample, and how they are ordered."
+---
+
+Everything else on the overview is a number. Insights are the part that says what the number **means** and what it **costs**.
+
+Every insight carries a tool name, a figure, and a consequence. An insight without a number is not an insight — it is a horoscope.
+
+## The five rules
+
+| Rule | Fires when | |
+|---|---|---|
+| [Low first-call](/insights/low-first-call) | First-call rate below **70%** | Agents are visibly failing to get what they wanted first time |
+| [Heavy payload](/insights/heavy-payload) | Average response over **10,000 bytes** | A single call is a meaningful slice of the context window |
+| [Silent empties](/insights/silent-empties) | More than **5%** of calls return empty | Something is broken quietly |
+| [Dead tool](/insights/dead-tool) | Registered, no calls in range | Costs schema in every session for nothing |
+| [Slow tool](/insights/slow-tool) | More than **10%** of calls over 2 seconds | The agent is visibly waiting |
+
+These thresholds are constants in one service, and the [tool health badges](/tools/health) read the same ones — so the table cannot say a tool is healthy while the panel beneath it says otherwise.
+
+## Twenty calls minimum
+
+No rule fires on a tool with fewer than **20 calls** in range.
+
+Two empties out of three calls is 67% and means nothing. Publishing it teaches authors to distrust the panel, and a panel nobody trusts is worse than no panel.
+
+The low first-call rule applies the same floor to its **nightly** call count specifically, since that is its real denominator.
+
+## Severity and ordering
+
+Each rule has a threshold at which it escalates:
+
+| Rule | Medium | High |
+|---|---|---|
+| Low first-call | Under 70% | Under 50% |
+| Heavy payload | Over 10kB | Over 30kB |
+| Silent empties | Over 5% | Over 20% |
+| Slow tool | Over 10% (low) | Over 30% |
+| Dead tool | Always medium | — |
+
+Insights are sorted by severity first, then by the size of the figure that fired them. So the worst instance of the worst class is at the top, which is where to start.
+
+## What is deliberately not here
+
+- **No insight without a tool name.** "Your server is slow" is not actionable.
+- **No insight without a figure.** The number is what makes it arguable, and arguable is what makes it useful.
+- **No trend-only insights.** A metric that moved is on the card, with its delta. An insight is a statement about a threshold being crossed.
+
+## Where they appear
+
+On the overview, in the insights panel. Over the API at `GET /v1/mcps/{id}/insights`. And through the [`get_insights` MCP tool](/mcp/tools), which is the one to reach for when someone asks how their server is doing rather than for a specific figure.
+
+All three read the same service, so all three say the same thing.
+
+## First-call insights lag a day
+
+The low first-call rule reads a metric computed by the [nightly pass](/api/concepts/nightly-pass) and only fires on days it has covered. Without that restriction every tool would be reported as broken every morning until 02:00.
+
+The other four rules are live.

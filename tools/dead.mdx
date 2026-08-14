@@ -1,0 +1,51 @@
+---
+title: "Dead tools"
+description: "Tools your server registers and nobody calls — and what they cost in every session anyway."
+---
+
+A **dead tool** is one that appears in the [startup payload](/sdk/what-is-sent) but has no calls in the range you are looking at.
+
+It shows as **never used** in the [tool health table](/tools/health), and fires the [dead tool insight](/insights/dead-tool) when it has a schema worth mentioning.
+
+## Why it costs anything
+
+Every registered tool is sent to the model at the **start of every session** — name, description and full input schema — whether or not it is ever called.
+
+A dead tool is therefore not free. It is a fixed toll on every conversation your server has, paid by every user, forever. The insight prices it exactly that way: schema bytes × sessions in range, in tokens and in dollars.
+
+This is the cost nothing in the protocol reports back to an author, and it is why the startup payload exists at all.
+
+## Why a tool is dead
+
+In roughly the order they turn out to be true:
+
+1. **The model does not know when to use it.** The description says what it does, not what question it answers. The most common cause and the most fixable.
+2. **Another tool covers it.** A general search that also handles the specific case, so the specific tool never wins.
+3. **It genuinely is not needed.** Built for a workflow nobody has.
+4. **It cannot be reached.** Requires an argument the model has no way to obtain from any other tool's output.
+
+The fourth is worth checking first because it is invisible otherwise: if `get_order` needs an internal id and nothing returns one, no description will ever fix it.
+
+## Before you delete it
+
+Widen the date range. A tool used once a month is not dead in a 7-day window and is in a 90-day one.
+
+Then check the [pairs](/metrics/tool-pairs) for the tools that *are* used. If a dead tool's job is being done by a two-hop sequence, the fix is usually to make the dead tool findable rather than to remove it.
+
+## Three real options
+
+- **Remove it.** The schema cost goes away entirely, immediately.
+- **Rewrite the description.** Lead with the question it answers, not the operation it performs.
+- **Merge it.** Fold it into a neighbouring tool as a parameter. One schema instead of two, and one fewer chance for the model to choose wrong.
+
+The third is what MCPulse's own [MCP server](/mcp/overview) does: six tools for sixteen metrics, with narrowing as a parameter rather than a name.
+
+## It reappears when it is called
+
+Nothing is marked dead permanently. The status is computed from the range you are looking at, so a tool called once inside the window is simply a tool with one call.
+
+## Related
+
+- [Schema size](/metrics/schema-size)
+- [Dead tool insight](/insights/dead-tool)
+- [Cut context cost](/guides/cut-context-cost)

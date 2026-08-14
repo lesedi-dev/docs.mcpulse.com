@@ -1,0 +1,63 @@
+---
+title: "First-call success"
+description: "The headline metric: did the model get what it wanted on the first try? How retries are detected, and why the number lags a day."
+---
+
+Everything else on the overview is a number. This one is the product.
+
+**First-call success** is the share of calls that were right the first time. Formally, a call counts when all three hold:
+
+1. `outcome` is `ok`
+2. `is_empty` is false
+3. no retry followed within 30 seconds
+
+It answers the question an MCP author cannot otherwise ask: *does the model understand my tools?* A tool that works perfectly but is described badly has a high `ok` rate and a low first-call rate, and only the second one tells you there is a problem.
+
+## How a retry is detected
+
+Within **one session**, find the same `tool_name` called twice within **30 seconds**. Then the `args_hash` decides:
+
+| | |
+|---|---|
+| **Different** `args_hash` | The model reworded and tried again. **Count as a retry.** |
+| **Same** `args_hash` | An identical request repeated. Normal — pagination, polling. **Not a retry.** |
+
+That distinction is the whole reason `args_hash` exists. Without it, a paginating client would look like a model in distress.
+
+<Note>
+  The hash is twelve characters of a SHA-256 over the arguments with keys sorted. It cannot be reversed, and the sorting is what stops the same arguments in a different order from looking like a different request. See [What is sent](/sdk/what-is-sent).
+</Note>
+
+## Sessions have to be real for this to work
+
+Retries are detected *within one session*. If every request opens a new session, there is never a second call to compare against and the rate reads 100% forever.
+
+On [streamable HTTP](/sdk/http) this is the mistake to avoid: the SDK shares one session and one buffer per process precisely so that calls stay grouped, even though a fresh `McpServer` is built per request.
+
+## It lags by one day
+
+Retries and first-call success are computed by the [nightly pass](/api/concepts/nightly-pass) at 02:00 UTC, which walks each session's events in order and applies the rule above. Today's rows are always zero until it runs.
+
+So the metric is reported strictly **through yesterday** and labelled *as of yesterday*. Including today in the denominator would drag the number down every morning and recover it every night, and a figure that moves on its own is worse than one that is a day old.
+
+Two consequences:
+
+- The denominator is **calls on days the pass has covered**, not all calls in range. A range that is entirely today has no rate at all.
+- A range with calls but no covered days returns `null`, which renders as *not yet computed* rather than `0%`. A zero there would claim every call failed.
+
+## Reading the number
+
+| Rate | Reading |
+|---|---|
+| Above 90% | The model gets it first time. Nothing to do. |
+| 70–90% | Some friction. Look at the retries figure beside it. |
+| Below 70% | The [low first-call insight](/insights/low-first-call) fires. |
+| Below 50% | Fires at high severity. Something is genuinely wrong with the tool's description or its arguments. |
+
+The **retries** figure sits directly under the card because it is the metric that moves this one.
+
+Per tool, the same rate appears in the [tool health table](/tools/health) and drives its status badge.
+
+## What to do when it is low
+
+See [Improve first-call success](/guides/improve-first-call). In short: read the tool's description as though you had never seen the API, name the arguments after what they mean rather than what they are, and check whether the tool is returning [empty results](/metrics/empty-results) that the protocol is calling success.

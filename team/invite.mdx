@@ -1,0 +1,57 @@
+---
+title: "Invite someone"
+description: "Add a teammate by email. They appear on the team list immediately, as invited."
+---
+
+From `/settings/team`, click **Invite**. The slide-over asks for three things.
+
+<Steps>
+  <Step title="Email">
+    Required. This is how they are invited and how they are matched to a sign-in identity when they arrive.
+  </Step>
+  <Step title="Full name">
+    Optional but worth filling in. Without it there is nothing to show on their row until they sign in and fill in their own profile — the column renders addresses and the feature looks broken.
+
+    Asked for here, shown on the pending row in the same shape as a member row.
+  </Step>
+  <Step title="Role">
+    Defaults to **member**. See [Roles and permissions](/team/roles).
+  </Step>
+</Steps>
+
+## They are a member from that moment
+
+There is no separate invitations table and no separate list on screen. An invitation is a **member with `status: invited` and no user id yet**.
+
+The row is in the same table, in the same list, with the same role. What `invited` records is that they have not signed in yet.
+
+## What happens when they sign in
+
+The first time they sign in with that address, the row is claimed: `user_id` is filled in, status becomes `active`, and they join **your** account with **the role you gave them** — rather than being handed an empty account of their own and wondering where the team went.
+
+Matching is on the address, because that is the only thing an invite and a brand-new identity have in common: the row was written before the person existed.
+
+<Note>
+  No email is sent yet. Tell them to sign in with that exact address. The delivery job is separate work; the membership is real either way.
+</Note>
+
+## Re-inviting
+
+Inviting someone who is **still waiting** refreshes their invite — the role and the timestamp update, and their name is only overwritten if you type a new one. Re-inviting without typing the name again does not erase the name already on the row.
+
+Inviting someone who is **already active** is refused. They are already here.
+
+## Who can invite
+
+**Admin** or higher.
+
+Only an **owner** can invite someone as an owner. Otherwise an admin could promote themselves by inviting their own address back at a higher role.
+
+## Withdrawing an invitation
+
+Remove the row. It is the same operation as removing a member, because it is the same row. See [Manage the team](/team/manage).
+
+## Related
+
+- [Roles and permissions](/team/roles)
+- [Manage the team](/team/manage)

@@ -1,0 +1,44 @@
+---
+title: "Delete an MCP"
+description: "What deleting a tracked server removes, what it leaves, and why there is no undo."
+---
+
+Open the MCP, go to **Settings**, and use **Delete this MCP** at the bottom of the page.
+
+<Warning>
+  This cannot be undone. There is no soft delete and no restore.
+</Warning>
+
+## What goes
+
+Deletion is the database's job, not the API's. Every foreign key cascades from the MCP, so one statement removes:
+
+- every **ingest key** on it, live or revoked
+- every **event** — the raw per-call rows
+- every **rollup** — `tool_days`, `server_days`, `tool_pairs`
+- every **session**
+- the registered **tool list**, and with it the schema sizes
+
+There is no cleanup code anywhere, deliberately: a delete written by hand is a delete that races ingest and misses whatever table was added last.
+
+## What stays
+
+- **Other MCPs in the account.** Siblings are untouched.
+- **The account, the team and the company profile.** Deleting an MCP is not deleting an account — see [Delete your account](/account/delete) for that.
+- **Nothing recoverable.** The rollups are gone; there is no export to take first, so take one before you delete if you need the history.
+
+## Live servers keep running
+
+Deleting an MCP revokes nothing on the server side, because there is nothing to revoke — the SDK never blocks and never retries. A server still wrapped with a key belonging to a deleted MCP simply posts into nothing and carries on serving tool calls normally.
+
+Remove the `MCPULSE_KEY` from the environment when convenient. Nothing breaks if you don't.
+
+## Confirming
+
+The confirm is a slide-over that lists what you are about to lose, rather than a sentence saying it cannot be undone — "this cannot be undone" does not tell you what "this" is. One click confirms it.
+
+Type-to-confirm is reserved for [deleting the account](/account/delete). Everything else can be made again.
+
+<Note>
+  Deleting an MCP requires the **admin** role or higher.
+</Note>

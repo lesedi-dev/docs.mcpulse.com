@@ -1,0 +1,69 @@
+---
+title: "Authentication"
+description: "MCPulse has two credentials that never overlap: an ingest key your server holds, and a session token your browser holds. Which one goes where, and why."
+---
+
+MCPulse has two kinds of credential, and they do not substitute for each other.
+
+| Surface | Credential | Held by |
+|---|---|---|
+| `POST /v1/ingest` | An ingest key, `mp_live_…` | Your MCP server, in its environment |
+| Everything else on the REST API | A Supabase access token (ES256 JWT) | The dashboard, in the browser |
+| The MCP endpoint, `/mcp` | An OAuth 2.1 access token | Your AI client, after you approve it |
+
+An ingest key cannot read metrics. A session token cannot post telemetry. That separation is enforced by the middleware on each route prefix, not by convention.
+
+## Ingest keys
+
+An ingest key is what the SDK sends:
+
+```
+Authorization: Bearer mp_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+- Format is `mp_live_` plus 32 random characters drawn with rejection sampling, so no character is more likely than another.
+- A key belongs to exactly **one MCP**. Telemetry posted with it lands under that MCP and nowhere else — the server never reads an MCP id from the request body.
+- Only a **SHA-256 hash** and the first **12 characters** are stored. The full key exists in one place: the response to the request that created it.
+- Keys are **named** at creation, because a list of twelve-character prefixes cannot tell you which server holds which — and "which one can I revoke" is the only question anyone asks of that list.
+- Revoking sets `revoked_at`; the row stays, so a key that stopped working is still explicable.
+
+<Warning>
+  Treat an ingest key like a password. Put it in the environment, never in source control, and never in anything a client can read.
+</Warning>
+
+Resolved keys are cached in memory for five minutes so ingest never costs a database round trip per batch. Revoking clears that cache immediately, so a revoked key stops working now rather than eventually.
+
+See [Create a key](/api-keys/create) and [Revoke a key](/api-keys/revoke).
+
+## Dashboard sessions
+
+Signing in is a **magic link**. There is no password, so there is no password to change and no password page in settings.
+
+The browser holds a Supabase-issued access token and sends it as a Bearer token to every non-ingest route. The API verifies it against the project's published JWKS and checks the issuer, audience and algorithm as well as the signature — a valid signature alone only proves the project minted the token, not that it was minted for this API.
+
+Your account and role are derived **from the token**, never from anything in the request. See [Roles and permissions](/team/roles).
+
+### Your first request settles your account
+
+If you sign in and have no membership yet, one of two things happens on your first account-scoped request:
+
+- Someone invited your address, so you claim that row and join their account with the role they gave you.
+- Nobody knows you, so you get a new account and become its owner.
+
+This runs before every account-scoped route rather than only when you create something, so a new user who signs in and looks around first has a real account instead of a wall of 404s.
+
+## MCP (OAuth)
+
+The MCP endpoint takes an OAuth 2.1 access token, not an ingest key. Your AI client discovers where to authenticate from the `WWW-Authenticate` header on the first 401, sends you to a consent screen, and receives a scoped token. See [MCP authentication](/mcp/auth).
+
+## What each failure means
+
+| Status | Meaning |
+|---|---|
+| `401` | Missing, malformed, expired or revoked credential |
+| `403` | Valid credential, but your role does not permit this |
+| `404` | The resource does not exist — or it does and it is not yours |
+| `413` | An ingest batch larger than 500 items |
+| `429` | Over the ingest rate limit; a `Retry-After` header says how long |
+
+A resource in someone else's account answers `404`, never `403`. MCPulse never confirms that an id exists outside your account.

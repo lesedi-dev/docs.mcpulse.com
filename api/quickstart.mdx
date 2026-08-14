@@ -1,0 +1,127 @@
+---
+title: "Quickstart"
+description: "Post a payload with curl, then read it back. The shortest path through the API."
+---
+
+Two credentials, two halves of this page. Start with ingest, because it needs nothing but a key.
+
+## Write: post a payload
+
+Get an ingest key from the dashboard — see [Create a key](/api-keys/create).
+
+```bash
+curl -X POST https://mcpulse-production.up.railway.app/v1/ingest \
+  -H "Authorization: Bearer mp_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "batch": [
+      {
+        "v": 1,
+        "type": "startup",
+        "session_id": "s_demo01",
+        "client_name": "curl",
+        "tools": [{ "name": "search_orders", "schema_bytes": 480 }]
+      },
+      {
+        "v": 1,
+        "type": "call",
+        "session_id": "s_demo01",
+        "tool_name": "search_orders",
+        "client_name": "curl",
+        "started_at": "2026-08-14T14:22:31Z",
+        "duration_ms": 240,
+        "outcome": "ok",
+        "response_bytes": 1420,
+        "is_empty": false,
+        "args_hash": "9c1b4e2f0a11"
+      }
+    ]
+  }'
+```
+
+You get **`202`** with an empty body, before the write happens. That is the contract: nothing makes your server wait on our database.
+
+<Note>
+  A `202` does not mean every item was accepted. Invalid items are dropped silently and the batch still succeeds — see [Ingest](/api/concepts/ingest) for why.
+</Note>
+
+## Read: the overview
+
+Reads take a **Supabase access token**, not an ingest key. The dashboard holds one in the browser; grab it from your session to try this by hand.
+
+```bash
+curl "https://mcpulse-production.up.railway.app/v1/mcps" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+```bash
+curl "https://mcpulse-production.up.railway.app/v1/mcps/MCP_ID/overview?from=2026-07-16&to=2026-08-14" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+Omit `from` and `to` for the **last 30 days ending today**. See [Date ranges](/api/concepts/date-ranges).
+
+## What the overview returns
+
+```json
+{
+  "range": { "from": "2026-07-16", "to": "2026-08-14" },
+  "nightly_as_of": "2026-08-13",
+  "filters": { "tools": [] },
+  "available_tools": ["get_customer", "search_orders"],
+  "totals": {
+    "calls": 892,
+    "sessions": 141,
+    "first_call_rate": 0.71,
+    "p95_latency": { "ms": 2000, "label": "500ms–2s", "hasData": true },
+    "cost_per_session_usd": 0.0071,
+    "total_cost_usd": 1.0011,
+    "retries": 104,
+    "empties": 38,
+    "empty_rate": 0.0426,
+    "error_rate": 0.0213,
+    "avg_response_bytes": 1493,
+    "total_bytes": 1331756,
+    "tools_used": 2,
+    "tools_registered": 3
+  },
+  "deltas": { "calls": { }, "first_call_rate": { }, "p95_ms": { }, "cost_per_session_usd": { } },
+  "sparklines": { "calls": [], "first_call_rate": [], "error_rate": [], "cost_usd": [] },
+  "outcomes": [],
+  "latency": [],
+  "calls_per_day": [],
+  "clients": [],
+  "follows": [],
+  "tools": []
+}
+```
+
+Three fields are worth understanding before you read the rest:
+
+| Field | |
+|---|---|
+| `nightly_as_of` | The last day the [nightly pass](/api/concepts/nightly-pass) has covered. `null` when it has covered none of the range — `first_call_rate` and `retries` are then unreliable or null |
+| `filters.tools` | The tool filter echoed back. A filter that silently failed to apply is worse than one that errors |
+| `available_tools` | Every tool with a rollup in range, computed **before** the filter narrows things — so the filter control can always offer a way back |
+
+## Narrow to a tool
+
+```bash
+curl "https://mcpulse-production.up.railway.app/v1/mcps/MCP_ID/overview?tools=search_orders,get_customer" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+Blanks are dropped and duplicates collapsed, so a trailing comma is harmless rather than a `400` — the filter is built by a URL, and URLs are edited by hand.
+
+`sessions`, `cost_per_session_usd` and `clients` come back `null` and empty under a filter. They have no tool dimension; see [The overview](/metrics/overview).
+
+## Then
+
+<CardGroup cols={2}>
+  <Card title="Insights" icon="lightbulb" href="/insights/overview">
+    `GET /v1/mcps/{id}/insights` — what is wrong, with numbers.
+  </Card>
+  <Card title="Errors" icon="triangle-exclamation" href="/api/concepts/errors">
+    The shape every failure comes back in.
+  </Card>
+</CardGroup>

@@ -1,0 +1,95 @@
+---
+title: "Playbooks"
+description: "Prompts that work, and what the agent should be doing behind each."
+---
+
+Copy these, or use them as a shape. Each note says which tools a well-behaved agent will reach for.
+
+## The weekly check
+
+```
+How is my orders server doing this week?
+```
+
+`get_insights` with `last_days: 7`, then `get_overview` for the headline figures.
+
+Insights first is the right order: the panel is sorted worst-first, so the answer starts with what is wrong rather than with a wall of numbers.
+
+## Find the tool worth fixing
+
+```
+Which tool on my orders server is costing me the most retries?
+```
+
+`list_tools` over 30 days, then `get_tool` on the worst offender.
+
+The useful ranking is calls × failure rate, not failure rate alone — a tool at 20% over 30 calls matters less than one at 60% over 900.
+
+## Diagnose one tool
+
+```
+Why is search_orders getting retried so much? Look at the outcome breakdown.
+```
+
+`get_tool`. The breakdown separates three different problems: high `bad_args` is a schema problem, high `empty` is a [silent-empties](/insights/silent-empties) problem, and mostly-`ok`-but-still-retried is a description problem.
+
+## Price the server
+
+```
+What does my orders server cost someone per conversation, and which tool is
+responsible for most of it?
+```
+
+`get_overview` with `metrics: ["cost", "sessions", "response_size"]`, then `metrics: ["tools"]` for the per-tool breakdown.
+
+## Find dead weight
+
+```
+Which tools on my server has nobody called in the last 90 days, and what is
+that costing in schema?
+```
+
+`get_insights` with `last_days: 90`. The dead-tool rule prices schema bytes against sessions in range.
+
+Ninety days matters — a tool used monthly is dead in a 7-day window and alive in a 90-day one.
+
+## Compare two periods
+
+```
+Compare first-call success on my orders server for the last 14 days against
+the 14 before that.
+```
+
+`get_overview` with `metrics: ["first_call_success"]` and `last_days: 14`. The deltas are already computed against the preceding window of equal length — the agent should read them rather than making a second call and subtracting.
+
+## Investigate one tool's behaviour in a session
+
+```
+What gets called immediately before and after get_customer?
+```
+
+`get_tool`, reading `follows`. Nightly, so it lags a day. See [Tool pairs](/metrics/tool-pairs).
+
+## Audit everything
+
+```
+Go through every MCP on my account and tell me the single most valuable fix
+for each, with the number that justifies it.
+```
+
+`list_mcps`, then `get_insights` per MCP.
+
+## Prompting notes
+
+**Name the server.** The tools resolve an MCP by name, so "the orders server" saves a `list_mcps` round trip. Two MCPs with the same name are refused rather than guessed at.
+
+**Say the window.** "This week", "the last 90 days", "March" all work. Without one you get the last 30 days.
+
+**Ask for one metric when you want one metric.** `metrics: ["calls"]` is one small answer; the whole overview is many. A good agent narrows on its own, and saying so helps.
+
+**Expect a day's lag on three figures.** First-call success, retries and tool pairs come from the [nightly pass](/api/concepts/nightly-pass). An agent reading `nightly_as_of` will say so.
+
+## Related
+
+- [Tools](/mcp/tools)
+- [Insights](/insights/overview)

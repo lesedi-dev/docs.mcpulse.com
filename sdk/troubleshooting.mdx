@@ -1,0 +1,86 @@
+---
+title: "SDK troubleshooting"
+description: "Nothing is arriving, numbers look doubled, or first-call success reads 100% forever. What each symptom means."
+---
+
+The SDK never throws and never blocks, which also means it never complains. Start by turning on `debug`, which writes to **stderr**:
+
+```ts
+watch(server, { key: process.env.MCPULSE_KEY, debug: true });
+```
+
+## Nothing arrives at all
+
+<AccordionGroup>
+  <Accordion title="disabled — no key, or enabled: false">
+    `watch()` resolved an empty key. Either the environment variable is unset, or it is set in a shell that is not the one running the server.
+
+    An empty key turns the SDK off on purpose — a misconfigured server should be silent rather than a source of 401s on every flush. Print the variable to confirm:
+
+    ```bash
+    node -e 'console.log(JSON.stringify(process.env.MCPULSE_KEY))'
+    ```
+  </Accordion>
+
+  <Accordion title="not an MCP server, or one this version does not recognise — left alone">
+    You passed something that is not an `McpServer`, or a version whose internals the SDK cannot reach.
+
+    Most often this is wrapping the **HTTP app** instead of the MCP server — see [Serving over HTTP](/sdk/http). Check your `@modelcontextprotocol/sdk` version too; the peer range is `>=1.0.0`.
+  </Accordion>
+
+  <Accordion title="Debug prints nothing at all">
+    `watch()` itself failed and swallowed the error — deliberately, since `watch()` failing must look like `watch()` was never called. Confirm the import resolves and that the call is actually reached.
+
+    On stdio, also confirm you are looking at **stderr**. Debug output never goes to stdout, because stdout is the transport.
+  </Accordion>
+
+  <Accordion title="Debug shows batches leaving, dashboard stays empty">
+    The key is being rejected, or it points at a different MCP than the one you are looking at.
+
+    Check the key has not been [revoked](/api-keys/revoke), and that its prefix matches a key listed under **this** MCP. A key belongs to exactly one MCP; posting with a staging key and reading the production MCP shows nothing.
+
+    Check `endpoint` too, if you set one. A wrong endpoint drops silently — that is why it should be left alone outside [local development](/guides/local-development).
+  </Accordion>
+</AccordionGroup>
+
+## Calls arrive, but the numbers look wrong
+
+<AccordionGroup>
+  <Accordion title="First-call success reads 100% forever">
+    Almost always fragmented sessions. Retries are detected **within one session**, so if every request opens a new session there is never a second call to compare against.
+
+    On streamable HTTP, make sure you are calling `watch()` inside the factory and not generating your own session identity. The SDK shares one session and one buffer per process for exactly this reason. See [Serving over HTTP](/sdk/http).
+  </Accordion>
+
+  <Accordion title="Every number is exactly double">
+    The same server is being watched twice from two different places. A second `watch()` on the same object is a no-op, but two separate `McpServer` instances reporting the same traffic are not.
+  </Accordion>
+
+  <Accordion title="First-call success, retries and tool pairs are empty">
+    Those three are computed by the [nightly pass](/api/concepts/nightly-pass) at 02:00 UTC. On your first day they have nothing to report, and they are always labelled *as of yesterday*. This is normal and nobody minds.
+  </Accordion>
+
+  <Accordion title="A tool shows as never used but you know it is called">
+    It appears in the startup payload's tool list but has no rollup rows in the range you are looking at. Widen the date range first.
+
+    If it is genuinely called and still absent, check the tool name matches exactly — the recorded name is `request.params.name`, which is what the client sent, not what you meant.
+  </Accordion>
+
+  <Accordion title="Everything is tool_error and nothing is crashed">
+    Check you are on a current version of the package. Telling the two apart requires wrapping the tool callbacks, not just the request handler — without that, `McpServer` has already converted the throw into `{ isError: true }` and the difference is unrecoverable.
+  </Accordion>
+</AccordionGroup>
+
+## Losing the last few calls
+
+The exit flush is best effort with a one-second timeout. A hard kill loses whatever is still buffered, which is at most five seconds or thirty calls. There is no way to make this lossless without blocking shutdown, which would be the wrong trade.
+
+## Still stuck
+
+Run the test server from the SDK repo against your key. It exercises every behaviour — fast, slow, empty, error, crash, and one tool registered but never called — so if it reports and your server does not, the difference is in your wiring.
+
+```bash
+cd examples/test-server
+pnpm install
+MCPULSE_KEY=mp_live_… pnpm exercise
+```

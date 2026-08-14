@@ -1,0 +1,96 @@
+---
+title: "Overview"
+description: "The MCPulse REST API. Ingest telemetry, read every metric the dashboard shows, and manage MCPs, keys and the account."
+---
+
+**The API is the product.** The dashboard is one client; the [MCP server](/mcp/overview) is another. Every number is computed server-side so that both get the same answer, and nothing important lives in the frontend.
+
+That is not an aspiration — the route handlers verify the token, confirm access, call a service and return. Any arithmetic in a handler would be arithmetic another client has to reimplement, so none appears.
+
+## Base URL
+
+```
+https://mcpulse-production.up.railway.app
+```
+
+<Note>
+  `api.mcpulse.dev` is not live yet, which is also why the SDK's default endpoint is the Railway URL rather than a domain that does not resolve. When the custom domain exists, both move together.
+</Note>
+
+The interactive reference is served by the API itself at [`/docs`](https://mcpulse-production.up.railway.app/docs), generated from the same Zod route definitions that validate the requests — so it cannot drift from the code.
+
+## Two kinds of auth
+
+| Surface | Credential |
+|---|---|
+| `POST /v1/ingest` | An ingest key, `mp_live_…`, as a Bearer token |
+| Everything else | A Supabase access token, as a Bearer token |
+
+They are isolated by design: an ingest key cannot read a metric, and a session token cannot post telemetry. See [Authentication](/api/concepts/authentication).
+
+## Request format
+
+- JSON bodies with `Content-Type: application/json`
+- All responses are JSON
+- Fields are `snake_case`
+- Timestamps are ISO 8601, UTC
+- Dates are `YYYY-MM-DD`, and always whole UTC days
+
+## Status codes
+
+| Code | Meaning |
+|---|---|
+| `200` | Success |
+| `202` | Accepted — ingest only, body intentionally empty |
+| `400` | Bad request — malformed body or parameters |
+| `401` | Missing, malformed, invalid or revoked credential |
+| `403` | Valid credential, but your role does not permit this |
+| `404` | Not found — or not yours |
+| `413` | Ingest batch larger than 500 items |
+| `429` | Rate limit exceeded |
+| `500` | Server error |
+
+See [Errors](/api/concepts/errors).
+
+## The endpoints
+
+**Ingest** — `POST /v1/ingest`
+
+**MCPs** — `GET`/`POST /v1/mcps`, `GET`/`PATCH`/`DELETE /v1/mcps/{id}`
+
+**Metrics** — `/v1/mcps/{id}/overview`, `/tools`, `/tools/{name}`, `/insights`, `/sessions`
+
+**Keys** — `GET`/`POST /v1/mcps/{id}/keys`, `DELETE /v1/keys/{keyId}`
+
+**Account** — `/v1/account`, `/usage`, `/members`, `/profile`, `/company`, `/notifications`
+
+**Health** — `GET /health`
+
+## Concepts
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="key" href="/api/concepts/authentication">
+    Two credentials, and which one goes where.
+  </Card>
+  <Card title="Ingest" icon="inbox" href="/api/concepts/ingest">
+    Batches, the 202, and why invalid items are dropped silently.
+  </Card>
+  <Card title="Date ranges" icon="calendar" href="/api/concepts/date-ranges">
+    from, to, defaults, and why every day is a UTC day.
+  </Card>
+  <Card title="The nightly pass" icon="moon" href="/api/concepts/nightly-pass">
+    Why three metrics lag by a day, and what nightly_as_of means.
+  </Card>
+  <Card title="Errors" icon="triangle-exclamation" href="/api/concepts/errors">
+    The error shape and what each status means.
+  </Card>
+  <Card title="Rate limits" icon="gauge-high" href="/api/concepts/rate-limits">
+    Payloads per minute, and Retry-After.
+  </Card>
+  <Card title="Versioning" icon="code-branch" href="/api/concepts/versioning">
+    The wire version, and what counts as breaking.
+  </Card>
+  <Card title="Security" icon="shield-halved" href="/security">
+    Isolation, key handling, and what is never recorded.
+  </Card>
+</CardGroup>

@@ -1,0 +1,33 @@
+---
+title: "Rename an MCP"
+description: "Change the name of a tracked server without touching a single recorded call."
+---
+
+Open the MCP, go to **Settings**, and edit the name.
+
+The name is display only. Every event, rollup, session and key is keyed on the MCP's id, so renaming affects nothing that was recorded before or after.
+
+<Steps>
+  <Step title="Open the MCP">
+    From the [MCP list](/mcps/list).
+  </Step>
+  <Step title="Go to Settings">
+    The MCP's own nav — not account settings. Entering an MCP swaps the sidebar for that MCP's sections, opening with a link back.
+  </Step>
+  <Step title="Edit the name and save">
+    One to 120 characters.
+  </Step>
+</Steps>
+
+<Note>
+  Renaming requires the **admin** role or higher. Members can read every number on the MCP but cannot change it. See [Roles and permissions](/team/roles).
+</Note>
+
+## It changes what agents call it
+
+The [MCP tools](/mcp/tools) accept an MCP by name as well as by id, matched case-insensitively. Renaming changes the name an agent has to use, and two MCPs sharing a name become ambiguous — `resolveMcpId` refuses to guess and asks for the id instead. Distinct names are worth keeping for that reason alone.
+
+## Related
+
+- [Delete an MCP](/mcps/delete)
+- [The MCP list](/mcps/list)

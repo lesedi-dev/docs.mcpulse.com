@@ -1,0 +1,51 @@
+---
+title: "Tool detail"
+description: "One tool in full: outcomes, latency distribution, retries, response size and what it gets called alongside."
+---
+
+`/m/:id/tools/:name` is one tool, with the same metrics as the overview scoped down to it.
+
+## What is on the page
+
+| | |
+|---|---|
+| **Calls** | In range |
+| **First-call success** | With retries beside it |
+| **Average response** | In bytes and in tokens |
+| **p95 latency** | The bucket the 95th-slowest call falls in |
+| **Cost** | This tool's response bytes, priced |
+| **Schema size** | What it costs every session, called or not |
+| **Outcome breakdown** | ok, empty, bad_args, tool_error, crashed |
+| **Latency distribution** | The four buckets |
+| **Calls per day** | With ok and empties per day |
+| **Follows** | Pairs involving this tool |
+
+The outcome breakdown and latency distribution render from the same components and the same shapes as the [overview](/metrics/overview), so the two screens cannot disagree about what "ok" counts.
+
+## Calls per day carries three series
+
+Calls, `ok` and `empties` per day. Reading them together is usually how a problem gets located in time: an empties line that lifts on a particular day points at a deploy, a data change, or an upstream that started returning nothing.
+
+Gap-filled, so a quiet day plots as zero.
+
+## Follows
+
+Up to ten [tool pairs](/metrics/tool-pairs) where this tool is either side. Nightly, so it lags by a day.
+
+Pairs are the fastest way to understand *when* a tool is used rather than how often. A tool that always follows one particular search is part of that search's job, whatever its description says.
+
+## Registered but never called
+
+A tool that appears in the [startup payload](/sdk/what-is-sent) but has no rollup rows still has a page. Every figure reads zero, `never_called` is set, and the schema size is the one real number on it — which is the point. See [Dead tools](/tools/dead).
+
+A name that is neither registered nor recorded returns `404`.
+
+## The name is what the client sent
+
+The recorded `tool_name` is `request.params.name` — what the client actually asked for, not what you meant to register. If a tool is missing from the list but you know it runs, check the name matches exactly.
+
+## Related
+
+- [Tool health](/tools/health)
+- [Outcomes](/metrics/outcomes)
+- [Latency](/metrics/latency)

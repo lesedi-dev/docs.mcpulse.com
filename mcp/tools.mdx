@@ -1,0 +1,136 @@
+---
+title: "Tools"
+description: "Six read-only tools, their arguments, and when to reach for each."
+---
+
+All six are read-only and idempotent. None writes anything.
+
+## Shared arguments
+
+Every tool except `list_mcps` takes an MCP, and every metric tool takes a range.
+
+| Argument | |
+|---|---|
+| `mcp` | The MCP, **by name or id**. Names match case-insensitively |
+| `last_days` | Window ending today, 1–365. Ignored when `from`/`to` are given |
+| `from` / `to` | `YYYY-MM-DD`, UTC, inclusive |
+
+`last_days` exists because it is what a model actually has. Asked for "the last 30 days" with only dates available, a model has to know today and do arithmetic — and one that is a day out reports a number that is quietly wrong rather than visibly broken. A count cannot be off by one.
+
+Explicit dates still win when given. "March" is a real question and no number of days expresses it.
+
+Omitting all three gives the last 30 days. See [Date ranges](/api/concepts/date-ranges).
+
+### Resolving an MCP by name
+
+Ambiguity is an **error rather than a guess**. Two MCPs called `staging` would otherwise report one server's numbers under the other's name — a wrong answer that looks exactly like a right one. The error names both ids.
+
+An unknown name comes back with the list of names that do exist, so the model can retry correctly rather than reporting a dead end.
+
+---
+
+## list_mcps
+
+Every MCP on the account, with calls in the last 7 days and first-call success.
+
+No arguments.
+
+Start here when the user names a server you have not seen, or asks what they have.
+
+---
+
+## get_overview
+
+Headline metrics for one MCP.
+
+| Argument | |
+|---|---|
+| `mcp` | Required |
+| `metrics` | Which metrics to return. Omit for the summary figures |
+| `tools` | Narrow to these tool names |
+| range | `last_days`, or `from`/`to` |
+
+### metrics
+
+**Summary metrics**, returned when `metrics` is omitted:
+
+`calls` · `first_call_success` · `latency` · `cost` · `sessions` · `outcomes` · `response_size`
+
+**Detail metrics**, returned only when named — each is an array long enough to swamp an answer:
+
+`daily` · `tools` · `clients` · `follows` · `sparklines`
+
+Ask for only what was wanted. `metrics: ["calls"]` returns calls and nothing else; prefer that over pulling the whole overview and reading one field out of it.
+
+Three fields are **always** present, because without them every figure is a number with no idea what it is a number of: `range`, `nightly_as_of`, `filters`.
+
+### tools
+
+With a tool filter on, `sessions` and cost per session come back `null`. A session belongs to the server, not to a tool. See [The overview](/metrics/overview).
+
+---
+
+## list_tools
+
+Every tool on one MCP with calls, first-call rate, average response size, p95 latency and schema size — the [tool health table](/tools/health).
+
+| Argument | |
+|---|---|
+| `mcp` | Required |
+| range | `last_days`, or `from`/`to` |
+
+Use this to find **which** tool is the problem; use `get_tool` once you know.
+
+---
+
+## get_tool
+
+One tool in detail: outcome breakdown, latency distribution, retries, first-call success, response size, and which tools get called alongside it.
+
+| Argument | |
+|---|---|
+| `mcp` | Required |
+| `tool` | The tool name, exactly as the server registered it |
+| range | `last_days`, or `from`/`to` |
+
+---
+
+## get_insights
+
+What is actually wrong, as sentences with numbers: low first-call success, heavy payloads, silent empty results, dead tools, slow tools.
+
+| Argument | |
+|---|---|
+| `mcp` | Required |
+| range | `last_days`, or `from`/`to` |
+
+This is the tool to reach for when someone asks **how their server is doing** rather than for a specific figure. See [Insights](/insights/overview).
+
+---
+
+## get_sessions
+
+Sessions in range with calls, bytes and cost per session, plus the most recent ones.
+
+| Argument | |
+|---|---|
+| `mcp` | Required |
+| `limit` | Recent sessions to return, 1–200. Default 100 |
+| range | `last_days`, or `from`/`to` |
+
+Counted by start time rather than summed per day, so a session crossing midnight stays one.
+
+---
+
+## Errors
+
+Two kinds, treated oppositely.
+
+A **caller error** is repeated verbatim, because it is actionable: *"No MCP named 'orders'. Yours are: Acme Orders, Staging"* is something a model can act on, and it will retry correctly.
+
+Anything else returns *"Internal error. The failure has been logged."* Database errors carry column names, constraint names and sometimes values — and a tool result goes somewhere worse than a log, into a model's context and from there into whatever it says next.
+
+## Related
+
+- [Playbooks](/mcp/playbooks)
+- [Troubleshooting](/mcp/troubleshooting)

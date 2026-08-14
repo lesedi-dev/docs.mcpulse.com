@@ -1,0 +1,80 @@
+---
+title: "The overview"
+description: "What every card, chart and panel on an MCP's main screen is measuring, and how the date range and tool filter change each one."
+---
+
+`/m/:id` is the screen you open an MCP to see. Everything on it is computed API-side, so the [REST API](/api/introduction) and the [MCP tools](/mcp/tools) return the same figures rather than deriving them again.
+
+## The header
+
+**Date range** and **tool filter**, both in the page header.
+
+The range picker commits on click rather than making a five-word decision take three, and prints the resolved dates underneath — "last month" is a name, not a date range. Every metric is a daily rollup bucketed in **UTC**, so a range is a set of whole UTC days.
+
+Omitting a range gives you the **last 30 days ending today**.
+
+## The four cards
+
+| Card | What it is |
+|---|---|
+| **Total calls** | Every `tools/call` in range |
+| **First-call success** | The share that got what the model wanted first time |
+| **p95 latency** | The bucket the 95th-slowest call falls in |
+| **Cost per session** | Response bytes priced as input tokens, divided by sessions |
+
+Each carries a **delta** against the preceding window of equal length, and a **sparkline** of its own daily series.
+
+A figure with no direction is not a metric: 340 calls is neither good nor bad until you know last month was 90. Which direction counts as an improvement is decided API-side, because it is domain knowledge rather than presentation — calls rising is healthy, latency and cost rising are not. The arrow follows the actual change and the colour follows the verdict, because the two come apart for latency and cost.
+
+<Note>
+  A previous period of zero yields **no delta** rather than an infinite one. Going from nothing to something is a start, not a percentage.
+</Note>
+
+There are four cards rather than eight. Eight was tried: a grid that size stops being a summary and becomes a second table, where nothing is emphasised because everything is. The extra figures sit with whatever explains them — retries under first-call success, failure and empty rates on the outcome breakdown, average response beside latency.
+
+## Below the cards
+
+<CardGroup cols={2}>
+  <Card title="Calls per day" icon="chart-line" href="/metrics/calls">
+    A line, gap-filled so a quiet day plots as zero rather than vanishing.
+  </Card>
+  <Card title="Tool health" icon="wrench" href="/tools/health">
+    Every tool with calls, average response size and a status badge.
+  </Card>
+  <Card title="Outcome breakdown" icon="chart-pie" href="/metrics/outcomes">
+    ok, empty, bad_args, tool_error, crashed — server-wide.
+  </Card>
+  <Card title="Latency distribution" icon="gauge-high" href="/metrics/latency">
+    Four buckets, server-wide.
+  </Card>
+  <Card title="Insights" icon="lightbulb" href="/insights/overview">
+    What is actually wrong, with a number and a consequence.
+  </Card>
+  <Card title="Tool pairs" icon="link" href="/metrics/tool-pairs">
+    Which tools get called alongside each other. Last, and optional.
+  </Card>
+</CardGroup>
+
+The outcome breakdown and the latency buckets render from the same components the [tool page](/tools/detail) uses, against the same shapes — so there is one definition of what "ok" counts rather than one screen subtracting empty answers and the other not.
+
+## The tool filter narrows what has a tool to narrow by
+
+`tool_days` carries a tool name, so these all scope cleanly: calls, outcomes, latency, retries, first-call success, response size, and the daily series. With a filter on, the chart is rebuilt from `tool_days`, because `server_days` has no tool column to filter on.
+
+These have **no tool dimension at all** and come back `null` or empty instead:
+
+| Filtered | Why |
+|---|---|
+| Sessions | A session belongs to the server, not to a tool |
+| Cost per session | Same — the denominator is server-wide |
+| Client split | `server_days.clients` counts calls per client with no tool alongside them |
+
+They are blanked rather than left unfiltered, because a server-wide number sitting in a filtered row reads as though it had been narrowed. The filter panel says so on screen, so a blank cost card is understood rather than reported as a bug.
+
+## Nothing recorded reads as zero
+
+A quiet range still draws its flat line along zero. A server that has never been called has a complete answer — nothing happened — and a new MCP covered in dashes reads as broken rather than waiting.
+
+The honest *not yet computed* is kept for the one case where it is true: calls exist and the [nightly pass](/api/concepts/nightly-pass) has not reached them, where a zero would instead claim every call failed.
+
+A dash survives only where a figure genuinely does not apply — cost per session under a tool filter.

@@ -1,0 +1,33 @@
+---
+title: "Clients"
+description: "Which MCP clients are calling your server, and how the split is recorded."
+---
+
+`client_name` is read from `clientInfo.name` on the `initialize` request — `claude-desktop`, `cursor`, `claude-code`, or whatever the client calls itself.
+
+The overview shows the split as calls per client across the range.
+
+## How it is stored
+
+Per day, as a JSON object on `server_days.clients`, incremented per call. Reading a range sums those objects.
+
+That shape is why the split has **no tool dimension**: the counter records calls per client per day with no tool alongside them. Under a [tool filter](/metrics/overview) the client list comes back empty rather than showing the server-wide split, which would read as though it had been narrowed.
+
+## What it is useful for
+
+**Deciding what to optimise for.** Clients differ in how they present tool descriptions, how aggressively they retry, and how much context they have to spend. A server used almost entirely from one client can be tuned for it; one split evenly cannot.
+
+**Explaining a change you did not make.** A first-call rate that moves without a deploy is often a client shipping a new model or a new prompt. The client split next to the [calls per day](/metrics/calls) chart is usually where that becomes visible.
+
+**Confirming an integration landed.** A new client name appearing is the clearest signal that a directory listing or a partnership is live.
+
+## It is what the client says it is
+
+The name is self-reported and unverified — it is a string on a request. Capped at 128 characters on the way in, along with every other free-text field, because ingest is a public endpoint and unbounded text would end up in the rollups and on every dashboard reading them.
+
+A client that reports nothing usable simply has no name recorded, and its calls still count everywhere else.
+
+## Related
+
+- [Sessions](/metrics/sessions) — each session carries the client that opened it
+- [Calls](/metrics/calls)

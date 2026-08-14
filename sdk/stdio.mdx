@@ -1,0 +1,46 @@
+---
+title: "Serving over stdio"
+description: "The common shape: one long-lived MCP server, wrapped once at the top level."
+---
+
+A stdio server is built once and lives for the life of the process. Wrap it after your tools are registered and before you connect the transport.
+
+```ts
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { watch } from "@mcpulse/sdk";
+
+const server = new McpServer({ name: "my-server", version: "1.0.0" });
+
+server.registerTool("search_orders", { /* … */ }, async (args) => { /* … */ });
+server.registerTool("get_customer", { /* … */ }, async (args) => { /* … */ });
+
+watch(server, { key: process.env.MCPULSE_KEY });
+
+await server.connect(new StdioServerTransport());
+```
+
+## stdout is the transport
+
+This is the one thing to get right on stdio. The protocol runs over stdout, so anything else written there corrupts the stream and the client disconnects.
+
+The SDK's `debug` output goes to **stderr**, never stdout, for exactly this reason. If you add logging of your own to a stdio server, send it to stderr too.
+
+```ts
+watch(server, { key: process.env.MCPULSE_KEY, debug: true });
+```
+
+## What one session means here
+
+One process is one session. The session id is generated when the first `watch()` runs and is shared for the life of the process, so every call the client makes lands in the same session.
+
+That is what makes [retries](/metrics/first-call-success) and [cost per session](/metrics/cost) meaningful: both are questions about a conversation, and a conversation split across many session ids answers neither.
+
+## Exit
+
+The buffer is flushed on process exit, best effort, with a one-second timeout. A client that disconnects cleanly loses nothing; a `SIGKILL` loses whatever was still buffered, which is at most five seconds of calls.
+
+## Related
+
+- [Serving over HTTP](/sdk/http) — the other shape, and the one that is easy to get wrong
+- [Options](/sdk/options)

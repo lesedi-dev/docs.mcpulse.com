@@ -1,0 +1,46 @@
+---
+title: "Notification events"
+description: "The six events MCPulse can tell you about, what fires each, and their defaults."
+---
+
+Six events, in three categories. The list, its categories and the sentence describing when each fires all come from the API — so the dashboard and the [MCP server](/mcp/overview) answer "what am I being told about" from one source rather than two that drift.
+
+## Tool health
+
+| Event | Fires when | In-app | Email |
+|---|---|---|---|
+| **First-call success drops** | A tool's [first-call rate](/metrics/first-call-success) falls below 70% over a day | On | On |
+| **A tool starts crashing** | A tool that was healthy begins throwing | On | On |
+| **Silent empties detected** | More than 5% of calls succeed but [return nothing useful](/metrics/empty-results) | On | Off |
+
+## Cost
+
+| Event | Fires when | In-app | Email |
+|---|---|---|---|
+| **Heavy payload threshold crossed** | A tool's [average response](/metrics/response-size) passes 10kB of context per call | On | Off |
+| **A tool goes unused** | A registered tool has not been called in 30 days but still costs [schema](/metrics/schema-size) | On | Off |
+
+## Digest
+
+| Event | Fires when | In-app | Email |
+|---|---|---|---|
+| **Weekly summary** | Calls, first-call rate and cost for the past seven days | Off | On |
+
+## Why the defaults look like that
+
+A new account is told about things that are **broken** and left alone about things that are merely **interesting**.
+
+Email defaults to off except where the whole point is that you are not looking at the dashboard — the two health events that mean something is actively wrong, and the weekly digest, which exists precisely for people who do not open the app daily.
+
+## The thresholds match the insights
+
+Every threshold above is the same constant the [insight rules](/insights/overview) read. An alert that fires at a different number from the panel it points at is two products.
+
+<Note>
+  **Nothing sends yet.** Preferences are stored; the delivery job is separate work. Shipping the preference first means it is already answered when that job arrives, rather than everyone being defaulted into whatever the job author picked.
+</Note>
+
+## Related
+
+- [Notification preferences](/notifications/preferences)
+- [Insights](/insights/overview)

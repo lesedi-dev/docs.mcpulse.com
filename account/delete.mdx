@@ -1,0 +1,51 @@
+---
+title: "Delete your account"
+description: "Owner-only, type-to-confirm, and irreversible. Exactly what it removes."
+---
+
+On `/settings/my-account`, at the bottom.
+
+<Warning>
+  This removes the account, every MCP in it, and every teammate's access, in one statement. There is no soft delete and nothing to restore from.
+</Warning>
+
+## What it removes
+
+Every foreign key cascades from the account, so one delete takes:
+
+- every **MCP** in the account
+- under each MCP: its **ingest keys**, **events**, **rollups** (`tool_days`, `server_days`, `tool_pairs`), **sessions** and registered **tool list**
+- every **member row**, including invitations that were never accepted
+- **notification preferences** for everyone in the account
+- the **company profile**
+
+Everyone else in the account loses access at the same moment.
+
+## What it leaves
+
+**Sign-in identities.** Identity belongs to Supabase Auth, and a person may hold membership of another account. What they lose here is this account, not their ability to sign in.
+
+**Nothing recoverable.** There is no export step built into the flow, so take what you need first.
+
+## Servers keep serving
+
+A live server still wrapped with a key from a deleted account carries on handling tool calls exactly as before. Its flushes are rejected and dropped silently, because the SDK never throws and never retries.
+
+Remove `MCPULSE_KEY` from those environments when convenient. Nothing breaks if you don't.
+
+## It is owner-only
+
+Every other destructive action in MCPulse stops at **admin**, because those remove one thing and can be done again. This removes the account itself. It sits one rank above the rest.
+
+## It asks you to type the account name
+
+Every other destructive confirm in MCPulse is a single click, which is right when the thing can be made again — and wrong here. This one asks you to type the account name first.
+
+## Deleting one MCP instead
+
+If you want to stop tracking one server, [delete the MCP](/mcps/delete). Siblings are untouched.
+
+## Related
+
+- [Roles and permissions](/team/roles)
+- [Security & data access](/security)

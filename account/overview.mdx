@@ -1,0 +1,34 @@
+---
+title: "Account settings"
+description: "Five settings pages behind one sidebar entry, and what lives on each."
+---
+
+**Settings** in the sidebar opens five pages. `/settings` on its own redirects to the first.
+
+| Page | Contents |
+|---|---|
+| [My account](/account/profile) | Your full name, your email, and deleting the account |
+| [Company](/company/profile) | Account name, website, phone, city, state, country, timezone |
+| [Team](/team/manage) | Members, roles and invitations, in one table |
+| [Notifications](/notifications/preferences) | Event × channel matrix |
+| [Billing](/billing/plans) | Usage against plan, and the plan cards |
+
+Entering settings swaps the sidebar for its own nav, opening with a link back — no section is somewhere you need the browser's back button to leave.
+
+## What is deliberately not here
+
+**Theme.** It lives in the account menu — in the sidebar on desktop, behind the avatar on mobile — because it is a preference you flip, not a form you fill in.
+
+**Passwords.** Sign-in is a magic link, so there is no password to change.
+
+**API keys.** They belong to an MCP, not to the account. A key belongs to one server, and the place you want it is the MCP you just created. See [Create a key](/api-keys/create).
+
+## One account per person
+
+MCPulse settles you into exactly one account. If someone invited your address, you join theirs with the role they gave you; otherwise you get a new account and become its owner. This happens on your first account-scoped request, not on your first write. See [Authentication](/authentication).
+
+## Related
+
+- [Your profile](/account/profile)
+- [Roles and permissions](/team/roles)
+- [Delete your account](/account/delete)

@@ -1,0 +1,54 @@
+---
+title: "Overview"
+description: "MCPulse ships its own MCP server, so Claude and other agents can read your analytics directly."
+---
+
+MCPulse is analytics for MCP servers, and it is one. Connect an AI client and ask *"how is my orders server doing?"* — the agent reads the real figures rather than guessing.
+
+## How it works
+
+| | |
+|---|---|
+| **Transport** | Streamable HTTP at `/mcp` |
+| **Auth** | OAuth 2.1 with PKCE. You approve it on a consent screen; nothing is copied or pasted |
+| **Scope** | Every call is scoped to the signed-in account |
+| **Writes** | **None.** Six tools, all read-only |
+
+Every number comes from the **same services the dashboard reads**. There is no metric computed in the MCP layer, because there is no metric that could be — which is the whole reason the logic lives in services.
+
+## Read-only, and enforced rather than promised
+
+Nothing here mints a key, renames an MCP, invites anyone or deletes anything — not because a hint says so, but because **no such tool is registered**.
+
+The tools carry `readOnlyHint`, which tells a client it may call them without asking. The absence of write tools is what makes that true.
+
+## Six tools, not sixteen
+
+The obvious design is one tool per metric — `get_calls`, `get_retries`, `get_p95` — so that every question has an obviously named tool.
+
+It is the wrong shape, and this product is the argument against it. Every registered tool costs its [schema in the context window of every session](/metrics/schema-size), whether or not it is ever called. Shipping sixteen near-identical tools over one rollup query would earn MCPulse its own [dead-tool warnings](/insights/dead-tool).
+
+So **narrowing is a parameter**. `get_overview({ metrics: ["calls"] })` returns calls and nothing else — one schema, one round trip, a small answer. All sixteen metrics are still reachable; they are arguments rather than names.
+
+The other half of that decision: the default response is a **summary**. The bulky arrays — daily series, per-tool rows, client splits, sparklines — are opt-in, because returning them on an unqualified question would undo the saving from the other side.
+
+## The tools
+
+| Tool | |
+|---|---|
+| `list_mcps` | Every MCP on the account, with 7-day calls and first-call success |
+| `get_overview` | Headline metrics for one MCP, narrowed by `metrics` and `tools` |
+| `list_tools` | Every tool with its health figures — find which tool is the problem |
+| `get_tool` | One tool in detail |
+| `get_insights` | What is actually wrong, as sentences with numbers |
+| `get_sessions` | Sessions, cost per session, and the most recent ones |
+
+See [Tools](/mcp/tools) for the full signatures.
+
+## Next steps
+
+- [Connect](/mcp/connect) — wire up Claude, Cursor, or your MCP client
+- [Authentication](/mcp/auth) — what the OAuth flow does under the hood
+- [Tools](/mcp/tools) — every argument, and when to reach for which
+- [Playbooks](/mcp/playbooks) — prompts that work
+- [Troubleshooting](/mcp/troubleshooting) — what the common errors mean

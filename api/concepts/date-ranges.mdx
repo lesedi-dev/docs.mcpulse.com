@@ -1,0 +1,67 @@
+---
+title: "Date ranges"
+description: "from and to, the 30-day default, and why every day is a UTC day."
+---
+
+Every metric endpoint takes the same two optional parameters.
+
+```
+?from=2026-07-16&to=2026-08-14
+```
+
+| | |
+|---|---|
+| Format | `YYYY-MM-DD` |
+| Both bounds | **Inclusive** |
+| Default | The last **30 days ending today** |
+| Reversed | Swapped, not rejected — the caller meant a range |
+
+Omitting `to` uses today. Omitting `from` uses 29 days before `to`.
+
+The resolved range is echoed back as `range` on every response, so a client always renders the window it actually got.
+
+## Days are UTC days
+
+This is the one that matters.
+
+Ingest buckets a call into a day with `(started_at at time zone 'utc')::date`, and every read resolves its range the same way. If the two sides ever disagreed about where a day starts, every number in the product would be quietly wrong at the edges and nothing would complain.
+
+So there is one function that turns `from`/`to` into UTC day strings, and everything uses it.
+
+The `timezone` on your [company profile](/company/profile) is display only. Nothing reads it into a query.
+
+## Gap filling
+
+Series that go into a chart — `calls_per_day`, `sparklines`, a tool's `calls_per_day` — carry **one entry per day in the range**, including days with nothing.
+
+A quiet day plots as zero rather than vanishing and making the line look continuous when it is not.
+
+## Comparison windows
+
+The `deltas` on the overview compare against the **preceding window of equal length**. A 30-day range compares against the 30 days before it.
+
+Two rules:
+
+- A previous period of **zero yields no delta**, not an infinite one. Going from nothing to something is a start, not a percentage.
+- Under a [tool filter](/metrics/overview), the previous window is scoped by the same filter — so "up 12%" compares like with like rather than one tool against six.
+
+## The nightly slice
+
+Retries, first-call success and tool pairs are only meaningful for days the [nightly pass](/api/concepts/nightly-pass) has walked. Every response carries `nightly_as_of` — the last covered day, or `null` if the range is entirely today.
+
+The denominator for first-call success is calls on covered days, not all calls in range.
+
+## Session ranges
+
+[Sessions](/metrics/sessions) are counted by `started_at` across the whole range rather than summed per day, because a session that opens at 23:50 and closes at 00:10 is one session. Summing daily counts would make it two, and would halve cost per session.
+
+## MCP tools take last_days as well
+
+The [MCP tools](/mcp/tools) accept `last_days` alongside `from`/`to`, because a model asked for "the last 30 days" would otherwise have to know today's date and do arithmetic — and a model that is one day out reports a number that is quietly wrong rather than visibly broken. A count cannot be off by one.
+
+Explicit dates still win when given. "March" is a real question and no number of days expresses it.
+
+## Related
+
+- [The nightly pass](/api/concepts/nightly-pass)
+- [The overview](/metrics/overview)

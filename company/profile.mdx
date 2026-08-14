@@ -1,0 +1,39 @@
+---
+title: "Company profile"
+description: "The account's name and details, on /settings/company."
+---
+
+`/settings/company` holds the details that belong to the account rather than to you.
+
+| Field | |
+|---|---|
+| Name | The account name. Shown in the sidebar and asked for when [deleting the account](/account/delete) |
+| Website | Up to 200 characters |
+| Phone | Up to 40 |
+| City · State · Country | Up to 120 each |
+| Timezone | Up to 64 |
+
+Every field except the name is optional and can be cleared.
+
+## The name has exactly one writer
+
+`PATCH /v1/account/company` is the only endpoint that writes the account's name. There was briefly a separate rename endpoint, and two writers with two different role checks is how "who may rename this account" ends up with two answers.
+
+## Timezone is display only
+
+This is worth being clear about, because it looks like it should do more than it does.
+
+**Nothing reads this field into a query.** Every rollup in MCPulse is bucketed in UTC, and every read uses the same clock — ingest buckets a call with `(started_at at time zone 'utc')::date` and the date range resolves to whole UTC days.
+
+If the two ever disagreed about where a day starts, every number in the product would be quietly wrong at the edges and nothing would complain. So they do not disagree, and the timezone here is a fact about your company rather than a setting that changes a chart.
+
+See [Date ranges](/api/concepts/date-ranges).
+
+## Who can edit it
+
+**Admin** or higher. Members can read every number in the account but cannot change the company.
+
+## Related
+
+- [Account settings](/account/overview)
+- [Roles and permissions](/team/roles)

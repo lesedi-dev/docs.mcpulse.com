@@ -1,0 +1,71 @@
+---
+title: "Local development"
+description: "Point the SDK at an API on your own machine, and turn instrumentation off in tests and CI."
+---
+
+Two options exist for development and nothing else: `endpoint` and `enabled`.
+
+## Point at a local API
+
+```ts
+watch(server, {
+  key: process.env.MCPULSE_KEY ?? "",
+  endpoint: process.env.MCPULSE_ENDPOINT,   // http://localhost:3000
+});
+```
+
+A trailing slash is stripped for you. Leaving `endpoint` unset sends to the hosted API.
+
+<Warning>
+  Never set `endpoint` in production. MCPulse is not self-hosted, so there is nowhere else to point — and because the SDK never throws and drops batches it cannot send, a wrong endpoint means you install, wrap, see no error at all, and simply never appear in your dashboard.
+
+  Drive it from an environment variable that is unset in production rather than from a hardcoded string.
+</Warning>
+
+## Turn it off in tests and CI
+
+```ts
+watch(server, {
+  key: process.env.MCPULSE_KEY ?? "",
+  enabled: process.env.NODE_ENV === "production",
+});
+```
+
+`enabled: false` returns the server untouched. An **empty key does the same thing** regardless of `enabled`, so simply not setting `MCPULSE_KEY` in CI is enough — a server started without its key should be silent, not a source of 401s on every flush.
+
+## Watch what is being sent
+
+```ts
+watch(server, { key: process.env.MCPULSE_KEY, debug: true });
+```
+
+Debug goes to **stderr**, never stdout — on a [stdio server](/sdk/stdio) stdout is the transport, and anything else written there corrupts the stream.
+
+You will see `watching`, then `startup: N tools, client <name>` on the first initialize, then each batch.
+
+## Use a separate MCP for development
+
+Not a separate key on the same MCP — a separate **MCP**. Development traffic is not representative: you call every tool once, you deliberately break things, and you restart constantly, which fragments [sessions](/metrics/sessions).
+
+Mixed into production numbers that moves [first-call success](/metrics/first-call-success) and [cost per session](/metrics/cost) for reasons that have nothing to do with your users.
+
+## Exercise every behaviour
+
+The SDK repo ships a test server with one tool per behaviour — fast, slow, empty, `isError`, throw, and one registered but never called so [dead-tool detection](/tools/dead) has something to find.
+
+```bash
+cd examples/test-server
+pnpm install
+MCPULSE_KEY=mp_live_… MCPULSE_ENDPOINT=http://localhost:3000 pnpm exercise
+```
+
+`pnpm exercise` drives every behaviour once through a real MCP client, flushes, and exits. It is the fastest way to confirm a whole install path — SDK to API to dashboard — is working, and to tell whether a problem is in your wiring or ours.
+
+## Restarts open new sessions
+
+A session id is generated per process, so every restart starts a fresh session. Expect an inflated session count and a low cost-per-session while developing. This is another reason to keep development on its own MCP.
+
+## Related
+
+- [Options](/sdk/options)
+- [SDK troubleshooting](/sdk/troubleshooting)

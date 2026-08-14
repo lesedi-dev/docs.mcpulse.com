@@ -1,0 +1,106 @@
+---
+title: "What is sent"
+description: "The two payloads that leave your process, the four outcomes, how empty results are detected, and how batches are buffered."
+---
+
+Two payload types leave your server. Both carry sizes and hashes only — see [Security](/security).
+
+## Startup
+
+Sent once, when a client calls `initialize`.
+
+```json
+{
+  "v": 1,
+  "type": "startup",
+  "session_id": "s_7f2a91",
+  "client_name": "claude-desktop",
+  "tools": [
+    { "name": "search_orders", "schema_bytes": 480 },
+    { "name": "get_customer", "schema_bytes": 210 }
+  ]
+}
+```
+
+`schema_bytes` is `JSON.stringify(schema).length` — what that tool costs the context window whether or not it is ever called. This list is the only way MCPulse knows a tool exists at all, which is what makes [dead-tool detection](/tools/dead) and [schema size](/metrics/schema-size) possible.
+
+Up to 500 tools. `client_name` is read from `clientInfo.name` on the initialize request itself rather than from `getClientVersion()`, which is only populated once initialisation has finished settling.
+
+## Call
+
+Sent every time a tool runs.
+
+```json
+{
+  "v": 1,
+  "type": "call",
+  "session_id": "s_7f2a91",
+  "tool_name": "search_orders",
+  "client_name": "claude-desktop",
+  "started_at": "2026-08-09T14:22:31Z",
+  "duration_ms": 240,
+  "outcome": "ok",
+  "response_bytes": 1420,
+  "is_empty": false,
+  "args_hash": "9c1b4e2f0a11"
+}
+```
+
+The payload is built in a `finally`, so whatever the handler does — returns, throws, or is cancelled — the call is recorded exactly once and the original outcome reaches the client unchanged.
+
+## The four outcomes
+
+Every call ends as exactly one of these.
+
+| Outcome | Meaning |
+|---|---|
+| `ok` | Ran and returned a result |
+| `bad_args` | Arguments failed schema validation — your handler never ran |
+| `tool_error` | Ran and returned `isError: true` |
+| `crashed` | Threw |
+
+Telling `crashed` from `tool_error` takes some doing. `McpServer` catches everything a tool does and converts it into `{ isError: true }`, so from outside its request handler a crash, a returned error and a rejected set of arguments are the same object. The SDK wraps your **tool callbacks** as well as the request handler, so what actually happened is known rather than guessed from an error message.
+
+That distinction is the difference between "your tool has a bug" and "the model called it wrong", which are opposite problems with opposite fixes.
+
+## is_empty
+
+True when a call succeeded and returned nothing useful:
+
+- an empty array
+- an empty object
+- an empty string
+- an array whose single text item parses to an empty array
+
+An error is not also an absence, so `is_empty` is only ever set on an `ok` outcome.
+
+This is the failure nobody reports: the protocol calls it success, the model gets nothing it can use, and you never hear about it. See [Empty results](/metrics/empty-results).
+
+## args_hash
+
+`sha256(JSON.stringify(args, sortedKeys))`, first 12 hex characters.
+
+The keys are sorted before hashing, or the same arguments in a different order would hash differently and every call would look like a fresh attempt.
+
+It is used for exactly one thing: telling whether two calls to the same tool within 30 seconds used the same arguments. Different hash means the model reworded and retried; same hash means an identical repeat, which is normal pagination or polling. See [First-call success](/metrics/first-call-success).
+
+## Buffering
+
+| | |
+|---|---|
+| Flush at | 30 payloads |
+| Flush every | 5 seconds |
+| Whichever | comes first |
+| Buffer cap | 1000 payloads — oldest dropped when full |
+| On exit | one final flush, best effort, 1-second timeout |
+| On network failure | the batch is dropped |
+
+No retry, no exponential backoff, no unbounded growth. A dropped batch costs a data point. A server that runs out of memory buffering analytics costs the customer their product, and that is the one failure MCPulse must never cause.
+
+## What the API does with it
+
+`POST /v1/ingest` accepts up to 500 payloads per request and replies `202` with an empty body **before** the write happens — nothing makes your server wait on our database.
+
+Invalid items are dropped silently and the batch still succeeds. Your server cannot fix a payload we rejected, so all a `400` would achieve is losing the 499 good ones alongside it.
+
+See [Ingest](/api/concepts/ingest).

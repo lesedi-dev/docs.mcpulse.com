@@ -1,0 +1,49 @@
+---
+title: "Dead tool"
+description: "Registered, never called, and charging every session for the privilege."
+---
+
+> `export_report` has never been called but costs 0.4k tokens of schema every session — $2.14 across 1,782 sessions in this range.
+
+## When it fires
+
+| | |
+|---|---|
+| Condition | Registered in the startup payload, **no calls in range** |
+| Severity | Always **medium** |
+| Minimum | A schema size above zero |
+| Lag | None — live |
+
+Unlike the other four rules, this one has no minimum call count — zero calls is the condition.
+
+## What it means
+
+Every tool your server registers is sent to the model at the **start of every session**, whether or not it is ever called. A tool nobody uses is a fixed toll on every conversation your server has.
+
+The insight prices it exactly that way: schema bytes converted to tokens, then multiplied by the number of [sessions](/metrics/sessions) in the range. With no sessions recorded yet it states the per-session cost alone.
+
+## Before you act
+
+**Widen the range.** A tool used once a month is dead in a 7-day window and alive in a 90-day one. This rule is scoped to what you are looking at.
+
+**Check whether it can be reached.** If it needs an argument no other tool returns, no description will fix it. That is a wiring problem, and it is invisible from every other screen.
+
+## Three real options
+
+| | |
+|---|---|
+| **Remove it** | The schema cost goes away entirely and immediately |
+| **Rewrite the description** | Lead with the question it answers, not the operation it performs |
+| **Merge it** | Fold it into a neighbour as a parameter — one schema instead of two |
+
+Merging is usually the best of the three when the tool does something genuinely useful that the model never finds. MCPulse's own [MCP server](/mcp/overview) registers six tools for sixteen metrics for exactly this reason: narrowing is a parameter, not a name.
+
+## It goes away on its own
+
+Nothing is marked dead permanently. One call inside the window and the tool is simply a tool with one call.
+
+## Related
+
+- [Dead tools](/tools/dead)
+- [Schema size](/metrics/schema-size)
+- [Find dead tools](/guides/find-dead-tools)

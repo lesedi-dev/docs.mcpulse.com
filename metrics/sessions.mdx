@@ -1,0 +1,50 @@
+---
+title: "Sessions"
+description: "One client connection, however many calls it holds. Why sessions have their own table and are never summed per day."
+---
+
+A **session** is one client connection to your server. The SDK generates a session id when the first `watch()` runs and shares it for the life of the process, so every call a client makes lands in the same session.
+
+## Why sessions matter
+
+Two of the most useful metrics are questions about a conversation rather than about a call:
+
+- [**Retries and first-call success**](/metrics/first-call-success) are detected *within one session*. Two calls to the same tool in different sessions are two people, not one struggling model.
+- [**Cost per session**](/metrics/cost) is what your server costs someone for one conversation, which is the figure an author can actually act on.
+
+Both are meaningless if sessions fragment. On [streamable HTTP](/sdk/http), where a fresh `McpServer` is built per request, the SDK deliberately shares one session per process for exactly this reason.
+
+## Counted by start time, never summed per day
+
+Sessions get their own table rather than a daily counter, because **a session can cross midnight**.
+
+A session that opens at 23:50 and closes at 00:10 is one session. Summing daily session counts would make it two — and would halve cost per session, the number an author is most likely to quote back.
+
+So sessions are counted by `started_at` across the whole range, which is correct at any range length.
+
+## What is stored per session
+
+| | |
+|---|---|
+| `session_id` | The id the SDK generated |
+| `client_name` | For example `claude-desktop` |
+| `started_at` / `last_seen` | First and most recent call |
+| `call_count` | Calls in this session |
+| `total_bytes` | Response bytes across the session |
+
+The API returns totals plus the most recent sessions — up to 500, defaulting to 100 — each with its bytes converted to tokens and dollars.
+
+## Sessions have no tool dimension
+
+A session belongs to the server, not to a tool. Under a [tool filter](/metrics/overview) the sessions figure and cost per session come back `null` rather than as unfiltered numbers sitting in a filtered row.
+
+Scoping a session to a tool is not a harder query; it is a meaningless one.
+
+## Average calls per session
+
+Returned alongside the totals, rounded to one decimal. It is a rough proxy for how much work a conversation makes your server do — and read next to [first-call success](/metrics/first-call-success), how much of that work was rework.
+
+## Related
+
+- [Cost per session](/metrics/cost)
+- [Clients](/metrics/clients)

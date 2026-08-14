@@ -1,0 +1,71 @@
+---
+title: "MCP troubleshooting"
+description: "What the common errors mean, and where each one is actually coming from."
+---
+
+<AccordionGroup>
+  <Accordion title="Authentication required / the client never prompts to sign in">
+    The client got a `401` and did not follow it. Discovery lives entirely in the `WWW-Authenticate` header on that response.
+
+    In a browser-based client, the usual cause is CORS: `www-authenticate` has to be an exposed header or the browser cannot read it, and the `401` that should start the OAuth flow becomes a dead end. Confirm your client supports **OAuth 2.1 with dynamic client registration** — MCPulse has no key to paste as a fallback.
+  </Accordion>
+
+  <Accordion title="Invalid token — token audience does not include this resource">
+    The token was issued for a different resource entirely. Disconnect and re-authenticate so the client obtains a fresh one.
+
+    Both this resource's URL and `authenticated` are accepted audiences — see [MCP authentication](/mcp/auth) for why. A token failing this check was genuinely issued for somewhere else.
+  </Accordion>
+
+  <Accordion title="Access is lost roughly every hour">
+    No refresh token was issued, so the access token expired and nothing renewed it.
+
+    That happens when `offline_access` is not requested. Reconnect; if it recurs, your client is not requesting the scope, and its OAuth configuration is where to look.
+  </Accordion>
+
+  <Accordion title="No MCP named X. Yours are: …">
+    Working as intended. The name did not match any MCP on your account, and the error lists the ones that do so the agent can retry correctly.
+
+    Names match case-insensitively after trimming. If yours is in the list and still not matching, check for a trailing space or a non-ASCII character in the name.
+  </Accordion>
+
+  <Accordion title='"staging" matches 2 MCPs. Use the id instead: …'>
+    Two MCPs share that name. The server refuses to guess — picking the first would report one server's numbers under the other's name, which is a wrong answer that looks exactly like a right one.
+
+    Use one of the ids from the message, or [rename](/mcps/rename) one of them.
+  </Accordion>
+
+  <Accordion title="This account has no MCPs yet">
+    You are authenticated against an account with nothing in it. Most often that means signing in with a different address than the one holding your MCPs — an invitation is matched on the exact address.
+
+    See [Invite someone](/team/invite).
+  </Accordion>
+
+  <Accordion title="Internal error. The failure has been logged.">
+    Something failed on our side. The message is deliberately bare: internal errors carry column names, constraint names and sometimes values, and a tool result goes into a model's context and from there into whatever it says next.
+
+    Retry once; if it persists, report it with the tool name, the arguments and roughly when.
+  </Accordion>
+
+  <Accordion title="first_call_rate is null, or retries are zero">
+    Not an error. Those come from the [nightly pass](/api/concepts/nightly-pass) at 02:00 UTC and only cover days it has walked.
+
+    `nightly_as_of` in every response says how far it has got. `null` means it has covered none of the range — usually a range that is entirely today, or an MCP on its first day.
+  </Accordion>
+
+  <Accordion title="sessions and cost_per_session_usd are null">
+    You passed a `tools` filter. Sessions have no tool dimension — a session belongs to the server, not to a tool — so those come back null rather than as unfiltered numbers in a filtered answer.
+
+    Drop the filter to get them. See [The overview](/metrics/overview).
+  </Accordion>
+
+  <Accordion title="The agent cannot write anything">
+    Correct, and permanent. The MCP server registers six read-only tools and no others. Nothing there mints a key, renames an MCP or touches the team.
+
+    Use the dashboard or the [REST API](/api/introduction) for writes.
+  </Accordion>
+</AccordionGroup>
+
+## Related
+
+- [Connect](/mcp/connect)
+- [MCP authentication](/mcp/auth)

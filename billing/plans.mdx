@@ -1,0 +1,41 @@
+---
+title: "Plans"
+description: "What each plan includes. No payment processor is connected yet."
+---
+
+`/settings/billing` shows the plan cards and your [usage](/billing/usage) against them.
+
+| | Free | Team | Scale |
+|---|---|---|---|
+| Monthly | $0 | $49 | $199 |
+| MCPs | 1 | 10 | Unlimited |
+| Tool calls a month | 100k | 2M | Unlimited |
+| History | 30 days | 12 months | Unlimited |
+| Team members | 2 | 10 | Unlimited |
+| | All 16 metrics | Insight alerts | MCP access to your own analytics |
+
+<Note>
+  **No payment processor is connected.** These are the shapes the screen renders, not something anything enforces today. Every account is on Free, nothing is metered against a limit, and no card is taken.
+
+  Usage is real. See [Usage](/billing/usage).
+</Note>
+
+## The plan grid never flickers
+
+It reads constants and local state, so it renders immediately rather than showing a loading placeholder. Anything with nothing to wait for must not look like it is waiting.
+
+## What "16 metrics" means
+
+The full set, on every plan:
+
+Counted live — calls per tool, calls per day, which client, crashes, tool errors, bad arguments, empty answers, speed, result size, sessions, cost per session.
+
+Computed nightly — retries, first-call success, tool pairs.
+
+From the startup payload — schema size, dead tools.
+
+See [The overview](/metrics/overview).
+
+## Related
+
+- [Usage](/billing/usage)

@@ -1,47 +1,116 @@
 ---
-title: "Quickstart"
-description: "Begin with a guide on the fastest path to a successful outcome"
+title: "Get Started"
+description: "Create an MCPulse account, add an MCP, mint an ingest key, wrap your server with the SDK, and see live tool analytics in minutes."
 ---
 
-Describe how someone begins using your product. What is the first thing they need to do? Are there any prerequisites?
-
-A quickstart should take someone from zero to using your product. They'll get a quick win and a sense of what they can accomplish.
-
-## Prerequisites
-
-Before you begin, you must have:
-
-- Requirement one (for example, Node.js 18+, a free account, an API key)
-- Requirement two (for example, a compatible device, a compatible browser, a compatible operating system)
-
-## Get started
+MCPulse tells you whether your MCP tools actually work for the models calling them. This quickstart takes you from a new account to real numbers on the overview.
 
 <Steps>
-  <Step title="Install">
-    Describe how to install your product or sign up.
+  <Step title="Create your account">
+    Go to the [MCPulse dashboard](https://mcpulse-eta.vercel.app) and sign up with your email address. There is no password — MCPulse emails you a magic link. Click it and you are signed in.
 
-    ```bash
-    npm install your-package
-    ```
+    <Note>
+      If a colleague has already invited you, sign in with the address they invited. You join their account with the role they gave you, rather than getting an empty account of your own. See [Invite someone](/team/invite).
+    </Note>
   </Step>
-  <Step title="Configure">
-    Describe any setup or configuration needed before first use.
 
-    ```bash
-    your-cli init
-    ```
+  <Step title="Create an MCP">
+    Click **New MCP** and give it a name — the name of the server you are about to instrument. One MCP per server.
+
+    Creating one opens it. That first overview is empty on purpose; it carries a prompt pointing at the install steps, and it disappears the moment a payload arrives. See [Create an MCP](/mcps/create).
   </Step>
-  <Step title="Run it">
-    Show the first thing a user does to see it working.
 
+  <Step title="Mint an ingest key">
+    On the **Installation** page, click **Create key** and name it — `production`, `staging`, whatever you will recognise in six months.
+
+    The full key is shown **once**, in the panel that appears at creation. Copy it now.
+
+    <Warning>
+      Only a SHA-256 hash and the first 12 characters are stored. MCPulse cannot show you the key again, and nobody here can recover it. If you lose it, [revoke it](/api-keys/revoke) and mint another.
+    </Warning>
+  </Step>
+
+  <Step title="Put the key in your environment">
     ```bash
-    your-cli start
+    MCPULSE_KEY=mp_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     ```
+
+    Never commit it. See [Authentication](/authentication).
+  </Step>
+
+  <Step title="Install the package">
+    <CodeGroup>
+    ```bash npm
+    npm install @mcpulse/sdk
+    ```
+    ```bash pnpm
+    pnpm add @mcpulse/sdk
+    ```
+    ```bash yarn
+    yarn add @mcpulse/sdk
+    ```
+    ```bash bun
+    bun add @mcpulse/sdk
+    ```
+    </CodeGroup>
+
+    `@modelcontextprotocol/sdk` is a peer dependency — whatever version your server already uses. MCPulse has no runtime dependencies of its own.
+  </Step>
+
+  <Step title="Wrap your server">
+    One import, one wrap, **after** every tool is registered. `watch` returns the same server, so nothing downstream changes.
+
+    ```ts
+    import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+    import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+    import { watch } from "@mcpulse/sdk";
+
+    const server = new McpServer({ name: "my-server", version: "1.0.0" });
+
+    // … your registerTool calls …
+
+    watch(server, { key: process.env.MCPULSE_KEY });
+
+    await server.connect(new StdioServerTransport());
+    ```
+
+    Serving over streamable HTTP instead? A fresh `McpServer` is built per request, so the wrap goes inside the factory. See [Serving over HTTP](/sdk/http).
+  </Step>
+
+  <Step title="Restart and make a call">
+    Restart your server and connect a client to it. The startup payload goes out on `initialize`, and each `tools/call` is buffered and flushed every 5 seconds or 30 calls, whichever comes first.
+
+    Refresh the overview. Calls, outcomes, latency and response size appear immediately.
+
+    <Note>
+      Three metrics — retries, first-call success and tool pairs — are computed by the [nightly pass](/api/concepts/nightly-pass) at 02:00 UTC, so they are labelled *as of yesterday* and are empty on your first day. That is normal.
+    </Note>
   </Step>
 </Steps>
 
-<Tip>
-  Give people a way to get help. This could be a link to a support page, a chat with a customer support agent, or a forum for your product.
+## Nothing arriving?
 
-  Example: Need help? Reach out to us at [support@yourcompany.com](mailto:support@yourcompany.com).
-</Tip>
+Turn on `debug` and watch stderr:
+
+```ts
+watch(server, { key: process.env.MCPULSE_KEY, debug: true });
+```
+
+The SDK never throws and never blocks, which also means it never complains — a missing key makes `watch()` a silent no-op by design. [SDK troubleshooting](/sdk/troubleshooting) lists what each debug line means.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Read the overview" icon="chart-line" href="/metrics/overview">
+    What each card, chart and panel on the main screen is measuring.
+  </Card>
+  <Card title="First-call success" icon="bullseye" href="/metrics/first-call-success">
+    The headline metric, and how retries are detected.
+  </Card>
+  <Card title="Insights" icon="lightbulb" href="/insights/overview">
+    The five rules, their thresholds, and what to do about each.
+  </Card>
+  <Card title="Invite your team" icon="users" href="/team/invite">
+    Anyone who can see the account can read its numbers.
+  </Card>
+</CardGroup>

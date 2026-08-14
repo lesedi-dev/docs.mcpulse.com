@@ -1,0 +1,55 @@
+---
+title: "Cost per session"
+description: "What one conversation with your server costs the person running it, in dollars of context."
+---
+
+**Cost per session** prices the bytes your tools return as input tokens and divides by the number of sessions.
+
+```
+tokens = response_bytes / 4
+usd    = tokens / 1_000_000 × $3
+cost per session = total usd ÷ sessions
+```
+
+Both constants — four bytes per token, three dollars per million input tokens — live in one service and appear nowhere else.
+
+## What it is actually telling you
+
+Not what MCPulse charges. What **your server costs the person running it**, per conversation, in context they have to pay for on every subsequent turn.
+
+That is a number an MCP author has otherwise no way to see, and it is the one most likely to be quoted back to you by someone deciding whether to keep your server installed.
+
+<Note>
+  Approximate on purpose. Four bytes per token varies by content and by model, and $3 per million is a default rate rather than yours. The point is the order of magnitude: knowing a session costs cents rather than fractions of a cent is what changes a decision.
+</Note>
+
+## It is not the whole cost
+
+Two things are priced here and one is not.
+
+- **Response bytes** — counted, per call, in `total_cost_usd` and in cost per session.
+- **Schema bytes** — counted separately, in the [dead tool insight](/insights/dead-tool), because a schema is paid once per session whether the tool runs or not. See [Schema size](/metrics/schema-size).
+- **The model's own output** — never counted. MCPulse cannot see it.
+
+## It goes blank under a tool filter
+
+Cost per session divides by sessions, and [sessions have no tool dimension](/metrics/sessions). With a tool filter on, the card is blank rather than showing a server-wide figure in a filtered row.
+
+`total_cost_usd` still narrows, because that is just the filtered tools' bytes priced. Only the per-session figure loses its denominator.
+
+## Rising is bad
+
+The delta on this card treats an increase as the bad direction, the same as latency. The arrow follows the actual change and the colour follows the verdict — the two come apart here, which is why colour alone is never the only signal.
+
+## Cutting it
+
+Cost per session falls when either half falls: fewer bytes per call, or fewer calls per session.
+
+- Fewer bytes — see [Cut context cost](/guides/cut-context-cost) and [Response size](/metrics/response-size).
+- Fewer calls — see [Improve first-call success](/guides/improve-first-call). A retried call is a call the session paid for twice.
+
+## Related
+
+- [Response size](/metrics/response-size)
+- [Sessions](/metrics/sessions)
+- [Usage](/billing/usage) — the same arithmetic across the whole account

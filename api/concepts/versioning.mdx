@@ -1,0 +1,63 @@
+---
+title: "Versioning & stability"
+description: "The wire version, the URL version, and what counts as a breaking change."
+---
+
+Two versions, and they are not the same thing.
+
+| | |
+|---|---|
+| **Wire version** — `v: 1` on every payload | The [ingest](/api/concepts/ingest) contract between the SDK and the API |
+| **URL version** — `/v1/…` | The REST surface |
+
+## The wire version
+
+Every payload carries `"v": 1`. Anything else is rejected as an invalid item — and, because invalid items are dropped silently, that means **silently**.
+
+It is bumped only for a genuinely breaking change to the payload shape. Adding an optional field does not qualify.
+
+The SDK restates the payload types in its own `types.ts` rather than depending on a shared schemas package, and a contract test pins every field name so the two cannot drift apart quietly.
+
+<Warning>
+  If the wire version ever changes, every server already running holds the old one. That is why it is a last resort: the migration is "everyone upgrades a dependency", and some of them never will.
+</Warning>
+
+## The URL version
+
+`/v1` is the only version. There is no `/v2` and no plan for one — the strategy is additive change under `/v1`.
+
+## What is additive
+
+These can happen at any time and your client must tolerate them:
+
+- **New fields on a response.** Responses are described rather than schema-validated on the way out, deliberately: pinning them would mean a field a service added gets silently stripped. Ignore what you do not recognise.
+- **New endpoints.**
+- **New optional query parameters.**
+- **New enum members** — a new [insight rule](/insights/overview), a new [notification event](/notifications/events), a new tool-health status.
+
+That last one is the one that catches people. Treat an unrecognised `rule` or `status` as unknown rather than as an error.
+
+## What would be breaking
+
+- Removing or renaming a response field
+- Changing a field's type or units
+- Removing an endpoint
+- Tightening validation on something previously accepted
+- Bumping the wire version
+
+## Thresholds are not API
+
+The [insight thresholds](/insights/overview) — 70%, 10kB, 5%, 10%, 20 calls — are product constants, not contract. They can be tuned, and a client hardcoding them will disagree with the panel.
+
+Read `rule`, `severity` and `value` from the response instead of re-deriving the verdict. The same goes for `deltas`, where **which direction counts as an improvement is decided server-side**: calls rising is healthy, latency and cost rising are not. That is domain knowledge rather than presentation, and the dashboard and the MCP server have to reach the same verdict without either re-deriving it.
+
+## The spec cannot drift
+
+`/docs/openapi.json` is generated from the same Zod route definitions that validate the requests. It is the authority on request shapes.
+
+Response shapes are owned by the services and described loosely in the spec, for the reason above.
+
+## Related
+
+- [Ingest](/api/concepts/ingest)
+- [Errors](/api/concepts/errors)

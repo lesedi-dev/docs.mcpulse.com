@@ -1,0 +1,35 @@
+---
+title: "The MCP list"
+description: "The home screen: every tracked server, its calls in the last 7 days, and its first-call success rate."
+---
+
+`/` is the MCP list — one full-width row per tracked server.
+
+| Column | What it shows |
+|---|---|
+| Name | What you called it |
+| Created | When the MCP was made |
+| Calls (7d) | Tool calls in the last seven days |
+| First-call success | The share of calls that got what the model wanted first time |
+
+Both figures are the same numbers the [overview](/metrics/overview) computes, scoped to a fixed seven-day window so the rows are comparable at a glance.
+
+## A row does one thing
+
+Clicking a row opens the MCP. There is nothing else on it.
+
+Renaming, keys and deletion all live **inside** the MCP, which means there is nothing destructive sitting beside the link people click all day — and one place to change each rather than two.
+
+## Zero is an answer
+
+A server that has never been called shows `0` and `0%`, not a dash and not an empty state. Nothing recorded reads as zero, never as "not yet": a complete answer of *nothing happened* is worth more than a shrug.
+
+The one exception is a genuinely unknown figure. First-call success is computed by the [nightly pass](/api/concepts/nightly-pass), so an MCP whose only calls arrived today has calls but no rate yet — that reads as *not yet computed*, because a zero there would claim every call failed.
+
+## Search
+
+The list carries its own search box in its header, always rendered. It matches on name.
+
+## Creating one
+
+**New MCP** opens a slide-over. Every panel in MCPulse that asks something of you is a slide-over, including the confirms. See [Create an MCP](/mcps/create).

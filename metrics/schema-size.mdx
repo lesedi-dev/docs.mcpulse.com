@@ -1,0 +1,57 @@
+---
+title: "Schema size"
+description: "What each registered tool costs the context window before it is ever called."
+---
+
+`schema_bytes` is `JSON.stringify(schema).length` for one registered tool, captured from the [startup payload](/sdk/what-is-sent) when a client calls `initialize`.
+
+## Why it is a cost
+
+Every tool your server registers is sent to the model **at the start of every session**, whether or not it is ever called. The name, the description and the full input schema all land in the context window before the conversation begins.
+
+A server with forty tools averaging 400 bytes of schema each spends 16kB — roughly 4,000 tokens — before answering a single question. That is paid once per session, by every user, forever.
+
+This is the cost that is completely invisible without instrumentation, because nothing in the protocol reports it back to the author.
+
+## Where it appears
+
+| | |
+|---|---|
+| **Tool health** | A schema-size column per tool |
+| **Tool detail** | The tool's schema size |
+| **Insights** | The [dead tool rule](/insights/dead-tool) prices unused schema against sessions |
+| **Tools registered** | The count on the overview, next to tools used |
+
+## It comes from startup, not from calls
+
+A tool appears in MCPulse the moment a client initialises against your server. That is what makes a tool "registered but never called" a thing MCPulse can see at all — the rollups would never know the tool existed.
+
+Two consequences:
+
+- **A tool you removed keeps its last recorded schema size** until a new startup payload replaces the list.
+- **A server nothing has connected to yet has no tool list**, so schema sizes are absent rather than zero.
+
+## Reading it
+
+There is no threshold on schema size alone, because a large schema for a heavily used tool is money well spent. It becomes an insight only when combined with disuse — see [Dead tools](/tools/dead).
+
+Rough shape of what is normal:
+
+| Schema size | Reading |
+|---|---|
+| Under 300 bytes | A simple tool. Nothing to think about. |
+| 300–800 bytes | Typical for a tool with a few described arguments. |
+| Over 1,500 bytes | Worth a look. Usually a deeply nested object or a long enum. |
+
+Long descriptions are usually worth their bytes; deeply nested optional objects usually are not.
+
+## Fewer, better tools
+
+The argument against one tool per operation is arithmetic, not taste. Sixteen near-identical tools over one underlying query cost sixteen schemas in every session and give the model sixteen chances to pick the wrong one.
+
+MCPulse's own [MCP server](/mcp/overview) registers six tools for sixteen metrics, and narrowing is a parameter rather than a name — for exactly the reason this page exists.
+
+## Related
+
+- [Dead tools](/tools/dead)
+- [Cut context cost](/guides/cut-context-cost)

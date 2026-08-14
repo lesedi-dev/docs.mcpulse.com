@@ -1,0 +1,72 @@
+---
+title: "Connect"
+description: "Point Claude, Cursor or any MCP client at MCPulse over streamable HTTP."
+---
+
+The endpoint is:
+
+```
+https://mcpulse-production.up.railway.app/mcp
+```
+
+Authentication is OAuth — there is no key to paste. Your client discovers where to sign in, opens a browser, and you approve on a consent screen.
+
+## Claude
+
+Add MCPulse as a remote MCP server in your Claude settings, using the URL above. Claude will prompt you to authenticate; sign in with your MCPulse account and approve.
+
+## Claude Code
+
+```bash
+claude mcp add --transport http mcpulse https://mcpulse-production.up.railway.app/mcp
+```
+
+Then run `/mcp` inside Claude Code to start the OAuth flow.
+
+## Cursor, VS Code, Windsurf and others
+
+Any client supporting **streamable HTTP** and **OAuth 2.1** works. In a JSON config it usually looks like this:
+
+```json
+{
+  "mcpServers": {
+    "mcpulse": {
+      "type": "http",
+      "url": "https://mcpulse-production.up.railway.app/mcp"
+    }
+  }
+}
+```
+
+Consult your client's documentation for the exact key names — they differ.
+
+<Note>
+  There is no stdio option. MCPulse is a hosted service, not a local process, and OAuth needs a browser.
+</Note>
+
+## What approving does
+
+You are sent to a consent screen in the MCPulse dashboard. It is the only thing on the page — no sidebar, no navigation — because a screen whose job is one irreversible decision should not offer somewhere else to click.
+
+Approving issues the client a scoped access token and a refresh token. The client can then read your account's analytics, and nothing else. See [Authentication](/mcp/auth).
+
+## Check it worked
+
+Ask your agent to list your servers. It should call `list_mcps` and come back with your MCPs by name.
+
+```
+What MCP servers do I have on MCPulse?
+```
+
+If it reports it cannot authenticate, see [Troubleshooting](/mcp/troubleshooting).
+
+## Naming your MCPs helps
+
+The tools accept an MCP **by name** as well as by id, matched case-insensitively — so "how is the orders server doing" works without a `list_mcps` round trip first.
+
+Two MCPs with the same name are ambiguous, and the server refuses to guess rather than reporting one server's numbers under the other's name. Distinct names are worth keeping.
+
+## Related
+
+- [Playbooks](/mcp/playbooks)
+- [Tools](/mcp/tools)

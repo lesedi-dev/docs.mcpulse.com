@@ -1,0 +1,43 @@
+---
+title: "Calls"
+description: "How many times your tools ran: per tool, per day, and across the whole server."
+---
+
+A **call** is one `tools/call` request handled by your server. It is counted whatever the outcome — a crash is still a call.
+
+## Where it appears
+
+| | |
+|---|---|
+| **Total calls** card | Every call in range, with a delta against the previous window |
+| **Calls per day** chart | One point per day in range |
+| **Tool health** table | Calls per tool, sorted descending |
+| **MCP list** | Calls in the last seven days, per MCP |
+
+## Per day
+
+The chart is **gap-filled**: every day in the range gets a point, so a quiet day plots as zero instead of vanishing and making the line look continuous when it is not.
+
+Unfiltered, it comes from `server_days` — one row per day. With a [tool filter](/metrics/overview) on it is rebuilt from `tool_days`, because `server_days` has no tool column to filter on. The two agree on totals; they are different tables answering the same question at different grains.
+
+## Days are UTC days
+
+Ingest buckets a call into a day with `(started_at at time zone 'utc')::date`, and every read uses the same clock. A call at 23:50 UTC belongs to that day, not to the next one in your timezone.
+
+The `timezone` on your [company profile](/company/profile) is display only. Nothing reads it into a query.
+
+## Retries are calls
+
+A model that calls `search_orders`, gets nothing useful, rewords and calls again has made **two calls**. Both are counted here.
+
+That is the point: the gap between calls and [first-call success](/metrics/first-call-success) is the work your tool descriptions are making the model do.
+
+## Why totals can lag by seconds
+
+The SDK buffers and flushes every 5 seconds or 30 calls, and ingest replies `202` before writing. A call made a moment ago may not be visible yet. Nothing else lags — only [retries, first-call success and tool pairs](/api/concepts/nightly-pass) wait for the nightly pass.
+
+## Related
+
+- [Sessions](/metrics/sessions) — calls grouped by conversation
+- [Outcomes](/metrics/outcomes) — how those calls ended
+- [Clients](/metrics/clients) — which client made them

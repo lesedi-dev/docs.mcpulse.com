@@ -1,0 +1,93 @@
+---
+title: "Security & data access"
+description: "MCPulse runs inside your MCP server. What it records, what it can never record, how accounts are isolated, and how keys are handled."
+---
+
+MCPulse installs a package inside a server you own and reads every tool call that server handles. That is a lot of trust, so the boundaries are worth stating plainly.
+
+## The package sits beside your traffic, not in it
+
+MCPulse is **not a proxy**. It is an npm package inside your own process.
+
+This matters twice over. Directory-listed MCP servers cannot change their URL, and OAuth breaks if traffic is redirected — so a proxy would be unusable for exactly the servers most worth measuring. And because the package sits beside the traffic rather than in it, **if MCPulse is down, your server keeps working**. A failed flush costs a data point. It must never cost a tool call.
+
+## What never leaves your process
+
+The rule is one sentence and it cannot be un-broken: **sizes and hashes only, never arguments, never results.**
+
+| Recorded | Never recorded |
+|---|---|
+| `tool_name` — the name you registered | The arguments the model passed |
+| `client_name` — for example `claude-desktop` | Anything inside the result |
+| `session_id` — a random per-process id | Any text a user typed |
+| `started_at`, `duration_ms`, `outcome` | Any identifier from your own domain |
+| `response_bytes` — `JSON.stringify(result).length` | The result the length was measured from |
+| `is_empty` — did it return anything useful | |
+| `args_hash` — 12 hex characters | The arguments the hash was made from |
+
+`args_hash` is twelve characters of a SHA-256 over the arguments with keys sorted. It exists for one purpose: telling whether two calls within 30 seconds used the *same* arguments, which is what separates a retry from ordinary pagination. It is deliberately too short to be brute-forced back into anything meaningful, and it is not reversible.
+
+There is **no option that turns any of this off**, in either direction. You cannot configure the SDK to send more, because a guarantee you can switch off is not a guarantee.
+
+## The three rules the package holds to
+
+1. **Never throw.** Every entry point is wrapped in a `try`/`catch` that swallows. If instrumentation cannot be attached, your server is handed back untouched and runs without analytics.
+2. **Never block.** Record, buffer, return. Nothing awaits the network on the path a model is waiting on. Ingest replies `202` before the write happens for the same reason.
+3. **Never store customer data.** The table above.
+
+The buffer is capped at 1000 payloads and sheds the oldest first. If the network is down the batch is dropped rather than retried — your server running out of memory over our analytics is the one failure we must never cause.
+
+## Account isolation
+
+Every request is scoped to the account derived from the credential:
+
+- An **ingest key** resolves to exactly one MCP. Telemetry cannot be posted into another account's MCP by any value in the body, because no value in the body is read for that purpose.
+- A **session token** resolves to one account and one role. Requesting an MCP outside that account returns `404`, not `403`, so ids outside your account are not even confirmed to exist.
+
+Underneath, every per-MCP table carries `account_id` directly and it is derived by a database trigger from the row's own `mcp_id` — never taken from the caller. A row inserted claiming someone else's account is corrected before it lands.
+
+## API key handling
+
+- Generated with 32 characters of cryptographic randomness, prefixed `mp_live_`.
+- Only a **SHA-256 hash** and the first 12 characters are stored. The raw key is returned once, at creation, and is unrecoverable afterwards.
+- Scoped to one MCP, named at creation, and revocable at any time from **Installation** or **Keys**.
+- Revoking clears the in-memory resolution cache immediately, so a revoked key stops working now rather than within five minutes.
+
+See [Authentication](/authentication).
+
+## Roles
+
+Three roles, account-wide. Reads are open to everyone in the account — an analytics product nobody on the team can read is not doing its job. Only writing needs rank.
+
+| | Read metrics | Create, rename, delete an MCP · mint or revoke keys · edit the company | Change roles · remove people | Delete the account |
+|---|---|---|---|---|
+| **member** | ✓ | | | |
+| **admin** | ✓ | ✓ | ✓ | |
+| **owner** | ✓ | ✓ | ✓ + may act on another owner | ✓ |
+
+Every one of these is enforced in the API, not in the interface. Hiding a button is a courtesy; the guards are the enforcement, and anything talking to the API directly — including the MCP server — gets no such courtesy. The last owner cannot be demoted or removed, because an account with no owner cannot be administered by anyone.
+
+See [Roles and permissions](/team/roles).
+
+## MCP access is read-only
+
+The MCP endpoint registers six tools and none of them write. Nothing there mints a key, renames an MCP or touches the team — not because a hint says so, but because no such tool exists to call. See [MCP tools](/mcp/tools).
+
+## Retention and deletion
+
+Deletion is the database's job. Every foreign key cascades:
+
+- Deleting **one MCP** removes its keys, events, rollups, sessions and tool pairs. Its siblings are untouched.
+- Deleting **the account** removes every MCP in it and everything underneath, plus every teammate's access, in a single statement.
+
+There is no cleanup code and no soft delete. [Deleting your account](/account/delete) is owner-only and asks you to type the account name first.
+
+Raw per-call `events` rows exist so the nightly pass can walk them; the dashboard reads only the daily rollups, which stay small and aggregate correctly across any range. A 30-day cleanup of `events` is built and deliberately not switched on at launch.
+
+## Rate limiting
+
+Ingest is limited to **10,000 payloads per minute per key**, counted in payloads rather than requests — a batch of 500 costs 500. Over the limit returns `429` with `Retry-After`. See [Rate limits](/api/concepts/rate-limits).
+
+## Questions and disclosure
+
+For security questions or to report a vulnerability, open a private report on [GitHub](https://github.com/getmcpulse). Please don't disclose a suspected vulnerability publicly before we have had a chance to respond.

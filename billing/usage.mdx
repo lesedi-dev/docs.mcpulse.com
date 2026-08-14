@@ -1,0 +1,37 @@
+---
+title: "Usage"
+description: "This month's consumption across the whole account — calls, bytes, tokens and cost."
+---
+
+The usage meters on `/settings/billing` cover the **whole account**, not one MCP, for the current month.
+
+| Figure | |
+|---|---|
+| MCPs | How many tracked servers exist |
+| Members | How many people are in the account, invited included |
+| Calls this month | Tool calls across every MCP |
+| Bytes this month | Response bytes across every MCP |
+| Tokens this month | Those bytes as tokens, `bytes / 4` |
+| Cost this month | Those tokens priced at $3 per million |
+| Tools tracked | Registered tools across every MCP |
+
+## What the cost figure means
+
+The same thing it means everywhere else in MCPulse: **what your servers cost the people running them**, in context, this month. Not what MCPulse charges — nothing is charged.
+
+It uses the same two constants as [cost per session](/metrics/cost), from the same service, so an account-wide figure and a per-MCP figure cannot disagree about arithmetic.
+
+## The month is a UTC month
+
+Like every other date boundary in the product. See [Date ranges](/api/concepts/date-ranges).
+
+## Usage is real, limits are not
+
+The numbers here come from the database. The plan they are drawn against is a constant on the screen, because no payment processor is connected. Nothing is throttled, capped or billed on the basis of this page.
+
+The one limit that **is** enforced is the ingest rate limit — 10,000 payloads per minute per key — which is there to protect the API rather than to meter a plan. See [Rate limits](/api/concepts/rate-limits).
+
+## Related
+
+- [Plans](/billing/plans)
+- [Cost per session](/metrics/cost)

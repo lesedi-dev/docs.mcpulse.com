@@ -1,0 +1,56 @@
+---
+title: "Silent empties"
+description: "Calls that succeed and return nothing. The agent was told these worked."
+---
+
+> 214 calls to `find_customer` returned empty with no error — 24% of 892 calls. The agent was told these succeeded.
+
+## When it fires
+
+| | |
+|---|---|
+| Condition | More than **5%** of calls return empty |
+| Severity | **medium** over 5%, **high** over 20% |
+| Minimum | 20 calls |
+| Lag | None — live |
+
+## What it means
+
+The tool ran, the protocol reported success, and the model got an empty array, an empty object or an empty string. Nothing anywhere reported a problem. See [Empty results](/metrics/empty-results) for exactly what counts.
+
+This is the quietest failure a server has. It never appears in an error rate, it never shows up in logs, and the only symptom the author sees is that people stop using the server.
+
+## The three causes
+
+<AccordionGroup>
+  <Accordion title="The tool should have errored">
+    An id that does not exist is not "no results" — it is a mistake the model can correct. Returning `[]` tells it nothing. Returning `isError: true` with "no customer with id 4821" tells it exactly what happened, and it will search instead of retrying blindly.
+
+    This is the most common cause and the highest-value fix.
+  </Accordion>
+
+  <Accordion title="The arguments do not do what they appear to">
+    A filter that silently ANDs everything when the model expected OR. A date argument expecting `YYYY-MM-DD` receiving a natural-language date and matching nothing. A case-sensitive match on a name.
+
+    Look at the [outcome breakdown](/metrics/outcomes): if `bad_args` is near zero and `empty` is high, the schema is accepting things it should be rejecting.
+  </Accordion>
+
+  <Accordion title="Your description promises more than the tool covers">
+    "Search customers" that only searches by exact email will return nothing most of the time, and the model has no way to know why. Narrow the description or widen the tool.
+  </Accordion>
+</AccordionGroup>
+
+## Why 5%
+
+Below 5%, an empty result is ordinary. Searches genuinely miss.
+
+Above it, the pattern is usually one of the three above rather than the shape of the data — and the rule's [20-call floor](/insights/overview) keeps a couple of unlucky calls from firing it.
+
+## It drags first-call success with it
+
+An empty call can never be a [first-call success](/metrics/first-call-success), by definition. A tool showing both insights has one problem, not two, and fixing the empties fixes both.
+
+## Related
+
+- [Empty results](/metrics/empty-results)
+- [Outcomes](/metrics/outcomes)

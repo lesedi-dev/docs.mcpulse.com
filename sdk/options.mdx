@@ -1,0 +1,69 @@
+---
+title: "Options"
+description: "Everything watch() accepts, what each default is, and what happens when you leave it out."
+---
+
+```ts
+watch(server, {
+  key: process.env.MCPULSE_KEY ?? "",
+  debug: true,
+});
+```
+
+| Option | Type | Default | |
+|---|---|---|---|
+| `key` | `string` | — | **Required.** The ingest key, `mp_live_…`. Without one the SDK does nothing. |
+| `debug` | `boolean` | `false` | Log what is sent, and why a send failed, to **stderr**. |
+| `enabled` | `boolean` | `true` | Set `false` to make `watch()` a no-op. Useful in tests and CI. |
+| `endpoint` | `string` | The MCPulse API | Where payloads go. Only for pointing at a local API while developing. |
+
+## key
+
+Trimmed on the way in. An **empty key turns the SDK off** regardless of `enabled` — a server started without its key configured should be silent, not a source of 401s on every flush.
+
+There is no fallback to an environment variable inside the package. Read the variable yourself and pass it, so the source of the key is visible in your own code.
+
+## debug
+
+Writes to stderr, never stdout, because on a [stdio server](/sdk/stdio) stdout is the transport.
+
+Turn it on when nothing is arriving. See [Troubleshooting](/sdk/troubleshooting) for what each line means.
+
+## enabled
+
+`enabled: false` skips instrumentation entirely. The server is returned untouched.
+
+```ts
+watch(server, {
+  key: process.env.MCPULSE_KEY ?? "",
+  enabled: process.env.NODE_ENV === "production",
+});
+```
+
+## endpoint
+
+<Warning>
+  Leave this alone in production. MCPulse is not self-hosted, so there is nowhere else to point — and because the SDK never throws and drops batches it cannot send, a wrong endpoint means you install, wrap, see no error at all, and simply never appear in your dashboard.
+</Warning>
+
+Its one real use is [local development](/guides/local-development), pointing at an API running on your own machine:
+
+```ts
+watch(server, {
+  key: process.env.MCPULSE_KEY ?? "",
+  endpoint: "http://localhost:3000",
+});
+```
+
+A trailing slash is stripped for you.
+
+## Buffering constants
+
+Not options — they are fixed, and the reasoning is in [What is sent](/sdk/what-is-sent).
+
+| | |
+|---|---|
+| Flush at | 30 payloads |
+| Flush every | 5 seconds |
+| Buffer cap | 1000 payloads, oldest dropped first |
+| Exit flush timeout | 1 second, best effort |

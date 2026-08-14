@@ -1,0 +1,61 @@
+---
+title: "Create a key"
+description: "Mint an ingest key for one MCP. It is shown once, at creation, and never again."
+---
+
+An **ingest key** is what the SDK sends. It belongs to exactly one MCP, and telemetry posted with it lands under that MCP and nowhere else.
+
+## Where
+
+Two entry points, both opening the same slide-over:
+
+- **Installation** — `/m/:id/install`, where you are when setting up
+- **Keys** — `/m/:id/keys`, where you come back months later to rotate
+
+Installation and keys are separate pages on purpose: pairing them put a delete button on the screen people visit while setting up.
+
+## Creating one
+
+<Steps>
+  <Step title="Name it">
+    Required, 1–60 characters. `production`, `staging`, `laptop` — whatever you will recognise in six months.
+
+    Twelve characters of prefix tells you a key exists, not which server holds it, and "which one can I revoke" is the only question anyone asks of that list.
+  </Step>
+  <Step title="Copy the key">
+    The full key appears in the panel that opens on creation. This is the **only** time it is ever shown.
+  </Step>
+  <Step title="Put it in your environment">
+    ```bash
+    MCPULSE_KEY=mp_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+  Only a SHA-256 hash and the first 12 characters are stored. MCPulse cannot show you the key again, and nobody here can recover it. Lose it and you [revoke it](/api-keys/revoke) and mint another.
+</Warning>
+
+## What a key looks like
+
+`mp_live_` plus 32 random characters, drawn with rejection sampling so no character in the alphabet is more likely than another.
+
+## Keys are per MCP, not per account
+
+There is no account-wide keys page. A key belongs to one server, and the place you want it is the MCP you just created.
+
+Several keys per MCP is normal and often right — one per deployment, so revoking one does not take down the others. All of them report into the same MCP.
+
+## Keys and metrics do not mix
+
+An ingest key can **only** post telemetry. It cannot read a single number. Reading the API takes a session token, and reading over MCP takes an OAuth token. See [Authentication](/authentication).
+
+<Note>
+  Creating a key requires the **admin** role or higher. Members can read every metric on the MCP but cannot mint or revoke.
+</Note>
+
+## Related
+
+- [List keys](/api-keys/list)
+- [Revoke a key](/api-keys/revoke)
+- [Install the SDK](/sdk/install)

@@ -1,0 +1,55 @@
+---
+title: "Tool health"
+description: "Every tool on a server, called or not, with the badge that says which one is the problem."
+---
+
+The tool health table lists **every tool your server registers**, not only the ones that ran. A tool with no calls in range still appears, because it still costs its schema in every session.
+
+Sorted by calls descending, then by name.
+
+## Columns
+
+| Column | |
+|---|---|
+| Tool | The name exactly as your server registered it |
+| Calls | Calls in range |
+| Avg response | Average `response_bytes` per call |
+| First-call success | The share right first time, or *not yet computed* |
+| Schema | `schema_bytes` from the [startup payload](/metrics/schema-size) |
+| Status | The badge below |
+
+The API's full tool list also carries per-outcome counts, retries and p95 latency per tool.
+
+## The status badge
+
+| Badge | Condition |
+|---|---|
+| **never used** | Registered, no calls in range |
+| **heavy payload** | Average response over 10,000 bytes |
+| **low first-call** | First-call rate under 70% |
+| **healthy** | None of the above |
+
+Heavy payload is checked first, so a tool that is both heavy and struggling shows **heavy payload** — the larger, more concrete problem, and often the cause of the other.
+
+These thresholds are the **same constants** the [insight rules](/insights/overview) read. The table cannot say a tool is healthy while the panel directly beneath it says it is not.
+
+## Reading the table
+
+Work down the calls column, not across it. The tool at the top is where a percentage point is worth the most.
+
+Three shapes worth recognising:
+
+- **High calls, low first-call.** The most valuable thing on the screen. See [Improve first-call success](/guides/improve-first-call).
+- **Low calls, large schema.** Paying for something nobody uses. See [Dead tools](/tools/dead).
+- **Any calls, heavy payload.** Every one of those calls is spending context. See [Cut context cost](/guides/cut-context-cost).
+
+## Paging and search
+
+Ten rows a page, from one shared constant — four tables each choosing their own page size reads as four products. The pager appears only when there is more than one page, so six tools show no pager and nothing is missing.
+
+The search box lives in the table's own header and is always rendered. It belongs to the table rather than the page: a control that comes and goes gives nobody a way to tell a rule from a bug.
+
+## Related
+
+- [Tool detail](/tools/detail)
+- [Dead tools](/tools/dead)

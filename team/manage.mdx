@@ -1,0 +1,51 @@
+---
+title: "Manage the team"
+description: "One table for everyone in the account, arrived or not. Changing roles, removing people, withdrawing invitations."
+---
+
+`/settings/team` is one table holding everyone in the account.
+
+| Column | |
+|---|---|
+| Person | Full name, or the email address if there is no name |
+| Email | |
+| Role | owner, admin or member |
+| Status | **active** or **invited** |
+| Joined / Invited | When they accepted, or when they were invited |
+
+## One table, not two
+
+An invitation is a member with `status: invited` and no sign-in identity yet. There is no separate invitations table and no second list.
+
+"Who is in this account" was once three tables answering the same question, which meant three answers that had to be kept in agreement. It is one now.
+
+## Names
+
+People are shown by name, and the name is asked for at the [invite](/team/invite) — otherwise there is nothing to show until that person signs in and fills in their own profile, and the column renders addresses.
+
+Where there is no name, the address stands on its own rather than under a placeholder pretending to be one. Search matches the name as well as the address.
+
+## Change a role
+
+Open the row's actions and pick a new role. It is a slide-over, like every panel that asks something of you.
+
+Owner-only. And three guards apply — you cannot act on yourself, you cannot act on someone who outranks you, and you cannot demote the last active owner. See [Roles and permissions](/team/roles).
+
+## Remove someone
+
+Same actions menu. **Admin** or higher, and the same outranking and last-owner guards apply.
+
+Removing an **invited** row withdraws the invitation. It is the same operation on the same row, which is why there is no separate withdraw action.
+
+The confirm is a slide-over listing what happens rather than a sentence saying it cannot be undone. Removing a person is not destructive to data — they lose access, nothing else changes — so it is a single click.
+
+## Search and paging
+
+Ten rows a page, from the same constant every table in MCPulse uses. The pager appears only when there is more than one page.
+
+The search box lives in the table's own header and is always rendered — it belongs to the table rather than the page, and a control that comes and goes gives nobody a way to tell a rule from a bug.
+
+## Related
+
+- [Invite someone](/team/invite)
+- [Roles and permissions](/team/roles)

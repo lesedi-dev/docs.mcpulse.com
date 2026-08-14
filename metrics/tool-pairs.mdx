@@ -1,0 +1,46 @@
+---
+title: "Tool pairs"
+description: "Which tools get called alongside each other inside a session, and what a strong pair usually means."
+---
+
+**Tool pairs** count consecutive calls within a session: how often `to_tool` was called immediately after `from_tool`.
+
+The panel sits last on the overview, under the tool table. It reads as a footnote to that table, and it is the one panel that can be absent entirely — so nothing below it moves when it is.
+
+## How it is computed
+
+By the [nightly pass](/api/concepts/nightly-pass), walking each session's events in `started_at` order and recording each adjacent pair. Stored per day, so it aggregates across any range.
+
+Like retries and first-call success, it lags by one day and is labelled *as of yesterday*.
+
+## What a strong pair usually means
+
+Direction matters, and so does whether the pair is symmetric.
+
+| Pattern | Usual reading |
+|---|---|
+| `search_x` → `get_x` | Healthy. Find then fetch is the shape most servers want. |
+| `get_x` → `get_x` | Not shown here — a tool following itself within 30 seconds is a [retry](/metrics/first-call-success), and belongs to that metric. |
+| `a` → `b` almost always | The two are one operation. Consider merging them, or having `a` return what `b` fetches. |
+| `b` → `a` and `a` → `b` equally | The model is bouncing. Usually neither tool's result says what to do next. |
+
+The most actionable pattern is the third. A pair that fires on nearly every session is two round trips and two sets of schema bytes doing the work of one — and each hop is another chance for the model to get it wrong.
+
+## Under a tool filter
+
+Pairs are filtered to those that **touch** a selected tool. A pair between two tools you excluded is not part of what you asked to see.
+
+Up to eight pairs are shown on the overview, and up to ten on a [tool page](/tools/detail), where they are scoped to pairs involving that tool.
+
+## When there is nothing here
+
+Three reasons, all normal:
+
+- The nightly pass has not covered any day in the range yet.
+- Sessions hold one call each, so there are no adjacent pairs.
+- Sessions are fragmenting — see [Serving over HTTP](/sdk/http).
+
+## Related
+
+- [Sessions](/metrics/sessions)
+- [First-call success](/metrics/first-call-success)

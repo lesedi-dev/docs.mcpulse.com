@@ -1,0 +1,86 @@
+---
+title: "Errors"
+description: "One error shape everywhere, what each status means, and why another account's resource answers 404."
+---
+
+Every failure comes back as JSON with one field.
+
+```json
+{ "error": "Client not found" }
+```
+
+There are no plain-text error bodies, and there is no per-route error shape. One handler covers the whole app — Hono has no per-route encapsulation, so it cannot silently fail to apply to a subtree.
+
+## Validation errors
+
+Body and parameter validation failures answer in the same envelope, with the failing path prefixed:
+
+```json
+{ "error": "name: Expected string, received number" }
+```
+
+The first issue is reported. The path is dotted, so a nested field reads as `body.tools.0.name`.
+
+## Internal errors never echo their cause
+
+```json
+{ "error": "Internal server error" }
+```
+
+A `500` says nothing else, deliberately. Database errors carry column names, constraint names and sometimes the offending value, and none of that belongs in a client's hands.
+
+The same rule holds more strongly on the [MCP endpoint](/mcp/tools), where a tool result goes into a model's context and from there into whatever it says next.
+
+## Status codes
+
+| Code | Meaning |
+|---|---|
+| `200` | Success |
+| `202` | Accepted — [ingest](/api/concepts/ingest) only, empty body |
+| `400` | Bad request — malformed body or parameters |
+| `401` | Missing, malformed, invalid or revoked credential |
+| `403` | Valid credential, but your role does not permit this |
+| `404` | Not found — or not yours |
+| `413` | Ingest batch larger than 500 items |
+| `429` | Too many requests — see [Rate limits](/api/concepts/rate-limits) |
+| `500` | Server error — safe to retry with backoff |
+
+## 404 for another account's resource
+
+A resource that exists in a different account returns `404`, never `403`.
+
+MCPulse never confirms that an id exists outside your account, so ids cannot be probed. Both gates — "no such MCP" and "not yours" — give the same answer.
+
+## 403 messages name the requirement
+
+Role failures say what would have been enough:
+
+```json
+{ "error": "This action requires the admin role" }
+```
+
+Three that are worth recognising:
+
+| Message | |
+|---|---|
+| `This action requires the admin role` | You are a member; the action needs write rank |
+| `Only an owner can do this to another owner` | An admin cannot act on an owner |
+| `This is the only owner — promote someone else first` | The last active owner cannot be demoted or removed |
+| `You cannot do this to yourself` | Changing your own role, or removing yourself |
+
+See [Roles and permissions](/team/roles).
+
+## Retrying
+
+| Status | Retry? |
+|---|---|
+| `400`, `401`, `403`, `404`, `413` | **No.** Retrying an unchanged request changes nothing |
+| `429` | Yes, after `Retry-After` |
+| `500` | Yes, with backoff |
+
+The SDK does not retry at all, on anything. A dropped batch costs a data point; an unbounded retry queue costs a customer their memory. See [What is sent](/sdk/what-is-sent).
+
+## Related
+
+- [Authentication](/api/concepts/authentication)
+- [Rate limits](/api/concepts/rate-limits)

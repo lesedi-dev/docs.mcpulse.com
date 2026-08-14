@@ -1,0 +1,41 @@
+---
+title: "Serving over HTTP"
+description: "Streamable HTTP builds a fresh McpServer per request. Wrap inside the factory, not around a long-lived instance."
+---
+
+A streamable-HTTP server builds a **new `McpServer` for every request**, so there is no long-lived instance to wrap. Wrap it inside the factory instead, beside the tool registration:
+
+```ts
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { watch } from "@mcpulse/sdk";
+
+function createServer() {
+  const server = new McpServer({ name: "my-server", version: "1.0.0" });
+
+  // … your registerTool calls …
+
+  return watch(server, { key: process.env.MCPULSE_KEY });
+}
+```
+
+`watch` returns the same server, so `return watch(…)` is the whole change.
+
+## Calling watch per request is expected and cheap
+
+This is the part that looks wrong and is not. The session and its buffer are held **per process**, shared by every `watch()` in it that reports to the same place — so calling `watch()` a thousand times does not open a thousand sessions.
+
+Without that sharing, each request would open a session of its own, no two calls would ever land in the same session, and **no retry could ever be detected**. First-call success would read 100% forever, which is worse than reading nothing.
+
+<Warning>
+  Do not generate your own session id per request and pass it in. There is no option to do so, deliberately — the shared stream is what keeps the session-scoped metrics honest.
+</Warning>
+
+## Wrapping the outer HTTP app does nothing
+
+MCPulse instruments the **MCP server**, not your HTTP framework. It hooks `initialize` and `tools/call` on the low-level protocol server, which is where the tool name, the outcome and the result size actually are. There is nothing useful to read at the Express or Hono layer.
+
+## Related
+
+- [Serving over stdio](/sdk/stdio)
+- [Sessions](/metrics/sessions) — why the session boundary matters
+- [First-call success](/metrics/first-call-success) — what breaks if sessions fragment

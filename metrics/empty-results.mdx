@@ -1,0 +1,48 @@
+---
+title: "Empty results"
+description: "Calls that succeeded and returned nothing useful — the failure that reports success."
+---
+
+`is_empty` marks a call that ran, succeeded, and gave the model nothing it could use.
+
+These are the failures nobody reports. The protocol calls them success, the client sees no error, the model gets an empty box, and you never hear about it. In the [outcome breakdown](/metrics/outcomes) they get their own slice for exactly that reason.
+
+## What counts as empty
+
+The SDK inspects the result and marks it empty when it is:
+
+- an empty array
+- an empty object
+- an empty string
+- an array whose single text item parses to an empty array
+
+That last case is the one worth knowing about. MCP results are usually a content array holding a text item, and the text is very often JSON — so a tool that "returns no rows" arrives as a populated content array containing the string `"[]"`. Without unwrapping it, every no-results call would look like a healthy answer.
+
+An error is not also an absence, so `is_empty` is only ever set alongside an `ok` outcome.
+
+## Where it appears
+
+| | |
+|---|---|
+| **Outcome breakdown** | The `empty` slice, on the overview and on each tool |
+| **Empty rate** | Empties as a share of calls, beside the breakdown |
+| **Insights** | The [silent empties rule](/insights/silent-empties) fires above 5% |
+| **First-call success** | An empty call never counts as a first-call success |
+
+## An empty result is not always a bug
+
+Sometimes nothing genuinely matched. A search over a small dataset returns nothing fairly often, and that is honest.
+
+The threshold is set at **5% of calls** because below that it is ordinary and above it something is usually wrong in one of three ways:
+
+1. **The model is asking for the wrong thing.** Your description implies the tool covers more than it does.
+2. **The arguments do not do what they appear to.** A filter that silently ANDs everything, a date field expecting a format the model does not produce.
+3. **The tool should have errored.** An id that does not exist is a `tool_error`, not an empty list — and telling the model so lets it recover instead of guessing.
+
+That third one is the most common and the most valuable to fix. An empty array tells a model nothing; `isError: true` with "no customer with that id" tells it exactly what to do next.
+
+## Related
+
+- [Silent empties insight](/insights/silent-empties)
+- [Outcomes](/metrics/outcomes)
+- [First-call success](/metrics/first-call-success)

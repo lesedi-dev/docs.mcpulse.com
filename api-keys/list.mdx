@@ -1,0 +1,32 @@
+---
+title: "List keys"
+description: "Every key on an MCP, live and revoked, with the prefix and the name you gave it."
+---
+
+`/m/:id/keys` lists every key ever created on this MCP.
+
+| Column | |
+|---|---|
+| Name | What you called it at creation |
+| Prefix | The first 12 characters, for recognition |
+| Created | When it was minted |
+| Status | Live, or revoked with the date |
+
+## The full key is not here
+
+It never is. Only a SHA-256 hash and the 12-character prefix are stored, so this list can tell you a key **exists** but not what it is.
+
+That is also why keys are named. A column of `mp_live_a1b2…` prefixes cannot answer which one is on staging, and revoking the right one becomes a guess.
+
+## Revoked keys stay listed
+
+Revoking sets a timestamp; the row remains. A key that stopped working should still be explicable six months later — "revoked on the 3rd" is an answer, and a missing row is not.
+
+## Why there is no account-wide list
+
+A key belongs to one MCP. An account-wide page would be a list of keys you then have to trace back to servers, which is the question the per-MCP list already answers by existing.
+
+## Related
+
+- [Create a key](/api-keys/create)
+- [Revoke a key](/api-keys/revoke)

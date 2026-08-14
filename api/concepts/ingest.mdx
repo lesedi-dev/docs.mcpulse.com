@@ -1,0 +1,84 @@
+---
+title: "Ingest"
+description: "POST /v1/ingest — batches, the 202, and why one bad payload never costs you the other 499."
+---
+
+`POST /v1/ingest` is the only route the SDK talks to.
+
+```json
+{ "batch": [ { "...payload" }, { "...payload" } ] }
+```
+
+Authenticated with an [ingest key](/api/concepts/authentication). The key resolves to exactly one MCP, and that is where every payload in the batch lands.
+
+## The rules
+
+| | |
+|---|---|
+| Max batch | **500** payloads. Larger returns `413` |
+| Rate limit | **10,000 payloads per minute per key**. Over returns `429` |
+| Response | **`202`**, empty body, before the write happens |
+| Invalid items | Dropped silently. The batch still succeeds |
+
+## Why 202 before the write
+
+Your server is mid-tool-call. Making it wait on our database to hand a result back to the model would put MCPulse on the latency path of every call it measures.
+
+So the write is scheduled and the response returns immediately. A failed write costs a data point; it must never cost a tool call.
+
+## Why invalid items are dropped silently
+
+The envelope is checked for shape, then each item is validated **individually**.
+
+A whole batch is never failed for one bad item. Your server cannot fix a payload we rejected — the SDK does not retry, by design — so all a `400` would achieve is losing the 499 good payloads alongside the bad one.
+
+Drops are logged server-side with a count, so a systematically malformed client is visible to us even though it is invisible to the caller.
+
+<Note>
+  This means a `202` is **not** confirmation that every item was accepted. If you are writing your own producer rather than using the SDK, validate against the payload shapes in [What is sent](/sdk/what-is-sent) before you trust the numbers.
+</Note>
+
+## What each payload does
+
+**Startup** upserts the `tools` table: tool name, `schema_bytes`, `last_seen`. This is the only way MCPulse learns a tool exists, and what makes [dead-tool detection](/tools/dead) and [schema size](/metrics/schema-size) possible.
+
+**Call** does four writes:
+
+1. inserts into `events`
+2. upserts `tool_days`
+3. upserts `server_days`
+4. upserts `sessions`
+
+Every upsert is `on conflict do update set x = table.x + excluded.x`. Never read-then-write, which races under load. The per-client counter on `server_days` is incremented in place.
+
+## Field limits
+
+Free-text fields are bounded because ingest is a public endpoint. Without caps a hostile client writes whatever it likes into the rollup tables and into every dashboard reading them.
+
+| Field | Limit |
+|---|---|
+| `session_id` | 128 characters |
+| `tool_name` | 200 |
+| `client_name` | 128 |
+| `args_hash` | 4–64 lowercase hex characters |
+| `duration_ms` | 0 – 86,400,000 |
+| byte counts | 0 – 2,147,483,647 |
+| `tools` per startup payload | 500 |
+
+`v` must be exactly `1`. See [Versioning](/api/concepts/versioning).
+
+## Writing your own producer
+
+Supported, and the wire format is documented — but the SDK does several things that are easy to get wrong and hard to notice:
+
+- one shared session per process, without which [retries](/metrics/first-call-success) can never be detected
+- telling `crashed` from `tool_error`, which `McpServer` erases
+- [empty detection](/metrics/empty-results), including the JSON-in-a-text-item case
+- key-sorted argument hashing
+
+If you build your own, read [What is sent](/sdk/what-is-sent) closely.
+
+## Related
+
+- [Rate limits](/api/concepts/rate-limits)
+- [Install the SDK](/sdk/install)

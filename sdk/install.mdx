@@ -1,0 +1,83 @@
+---
+title: "Install the SDK"
+description: "@mcpulse/sdk — one import, one wrap. No runtime dependencies, Node 20.12 or newer."
+---
+
+`@mcpulse/sdk` is how data gets out of your MCP server. It is installed **inside your own process**, not in front of it.
+
+## Install
+
+<CodeGroup>
+```bash npm
+npm install @mcpulse/sdk
+```
+```bash pnpm
+pnpm add @mcpulse/sdk
+```
+```bash yarn
+yarn add @mcpulse/sdk
+```
+```bash bun
+bun add @mcpulse/sdk
+```
+</CodeGroup>
+
+## Requirements
+
+| | |
+|---|---|
+| Node | 20.12 or newer |
+| `@modelcontextprotocol/sdk` | A peer dependency — whatever version you already use, `>=1.0.0` |
+| Runtime dependencies | **None.** The package brings nothing with it |
+
+The package ships ESM and CJS builds and its own types.
+
+<Note>
+  There are no runtime dependencies on purpose. `@mcpulse/schemas` was going to be the one exception and is not: it brings Zod with it, which would mean validating our own output inside every customer's server when the API already validates it on arrival. The payload types are restated in the SDK's own `types.ts`, and a contract test pins every field name so the two cannot drift.
+</Note>
+
+## Wrap your server
+
+```ts
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { watch } from "@mcpulse/sdk";
+
+const server = new McpServer({ name: "my-server", version: "1.0.0" });
+
+// … your registerTool calls …
+
+watch(server, { key: process.env.MCPULSE_KEY });
+
+await server.connect(new StdioServerTransport());
+```
+
+`watch` instruments the server in place and returns the **same object**, so the call can be dropped around an existing one without moving anything else.
+
+Two things matter about placement:
+
+- **After your tools are registered.** `McpServer` does not create its `tools/call` handler until the first tool exists. The SDK re-applies its wrapper after each later registration too, so both orders work — but registering first is the shape to write.
+- **Once per server.** Watching the same server twice is a no-op, guarded by a `WeakSet`. Left unguarded it would open a second session and report every call under both, doubling your numbers.
+
+## Which shape do you have?
+
+<CardGroup cols={2}>
+  <Card title="stdio" icon="terminal" href="/sdk/stdio">
+    One long-lived server. Wrap it once, at the top level.
+  </Card>
+  <Card title="Streamable HTTP" icon="server" href="/sdk/http">
+    A fresh server per request. Wrap inside the factory.
+  </Card>
+</CardGroup>
+
+## Get a key
+
+An ingest key is minted per MCP in the dashboard and shown once. See [Create a key](/api-keys/create).
+
+Without a key, `watch()` is a silent no-op — a server started without its key configured should be quiet, not a source of 401s on every flush.
+
+## Next
+
+- [Options](/sdk/options) — everything `watch()` accepts
+- [What is sent](/sdk/what-is-sent) — the exact payloads, and the outcomes
+- [Troubleshooting](/sdk/troubleshooting) — when nothing arrives

@@ -1,0 +1,54 @@
+---
+title: "Revoke a key"
+description: "Stop a key working immediately. What happens to the server still using it."
+---
+
+From `/m/:id/keys`, use the row's actions and confirm.
+
+## It takes effect immediately
+
+Resolved keys are cached in memory for five minutes so ingest never costs a database round trip per batch. Revoking **clears that cache**, so a revoked key stops working now rather than eventually.
+
+## What happens to a server still using it
+
+Nothing bad. The SDK never throws and never blocks:
+
+- Tool calls keep working exactly as before. Your users notice nothing.
+- Flushes are rejected and the batch is dropped. No retry, no backlog, no growing buffer.
+- Nothing is logged unless `debug` is on.
+
+That silence is deliberate — see [the three rules](/security). It also means a server whose key you revoked will sit there reporting nothing indefinitely, so update its environment when convenient.
+
+## Revoked, not deleted
+
+The row stays with a `revoked_at` timestamp, so the key remains explicable. See [List keys](/api-keys/list).
+
+There is no un-revoke. Mint a new key and update the environment.
+
+## Rotating a key
+
+Do it in this order and there is no gap in your data:
+
+<Steps>
+  <Step title="Create the new key">
+    On the same MCP. Several live keys is fine — they all report into the same place.
+  </Step>
+  <Step title="Deploy the new key">
+    Update `MCPULSE_KEY` and restart. A restart opens a new [session](/metrics/sessions), which is expected.
+  </Step>
+  <Step title="Confirm data is arriving">
+    Check the calls chart, or turn on `debug` on one instance.
+  </Step>
+  <Step title="Revoke the old key">
+    Now, not before.
+  </Step>
+</Steps>
+
+<Note>
+  Revoking requires the **admin** role or higher — the same bar as minting. Revoking a key stops a live server reporting, so it needs the write bar rather than mere membership.
+</Note>
+
+## Related
+
+- [Create a key](/api-keys/create)
+- [Authentication](/authentication)

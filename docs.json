@@ -1,72 +1,236 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mintlify Starter Kit",
+  "theme": "luma",
+  "name": "MCPulse",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#0d8ba6",
+    "light": "#5ecfe4",
+    "dark": "#5ecfe4"
   },
   "favicon": "/favicon.svg",
-  "navigation": {
-    "pages": [
-      {
-        "group": "Getting Started",
-        "pages": [
-          "index",
-          "quickstart"
-        ]
-      }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
   "logo": {
     "light": "/logo/light.svg",
     "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://app.mintlify.com"
-    }
   },
   "contextual": {
     "options": [
       "copy",
       "view",
       "chatgpt",
-      "claude",
-      "perplexity",
-      "mcp",
-      "cursor",
-      "vscode"
+      "claude"
+    ]
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "GitHub",
+        "href": "https://github.com/getmcpulse"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Sign In",
+      "href": "https://mcpulse-eta.vercel.app"
+    }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Product",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "authentication"
+            ]
+          },
+          {
+            "group": "Trust & security",
+            "pages": [
+              "security"
+            ]
+          },
+          {
+            "group": "MCP servers",
+            "pages": [
+              "mcps/create",
+              "mcps/list",
+              "mcps/rename",
+              "mcps/delete"
+            ]
+          },
+          {
+            "group": "Install the SDK",
+            "pages": [
+              "sdk/install",
+              "sdk/stdio",
+              "sdk/http",
+              "sdk/options",
+              "sdk/what-is-sent",
+              "sdk/troubleshooting"
+            ]
+          },
+          {
+            "group": "Metrics",
+            "pages": [
+              "metrics/overview",
+              "metrics/calls",
+              "metrics/first-call-success",
+              "metrics/outcomes",
+              "metrics/empty-results",
+              "metrics/latency",
+              "metrics/response-size",
+              "metrics/sessions",
+              "metrics/cost",
+              "metrics/schema-size",
+              "metrics/tool-pairs",
+              "metrics/clients"
+            ]
+          },
+          {
+            "group": "Tools",
+            "pages": [
+              "tools/health",
+              "tools/detail",
+              "tools/dead"
+            ]
+          },
+          {
+            "group": "Insights",
+            "pages": [
+              "insights/overview",
+              "insights/low-first-call",
+              "insights/heavy-payload",
+              "insights/silent-empties",
+              "insights/dead-tool",
+              "insights/slow-tool"
+            ]
+          },
+          {
+            "group": "API Keys",
+            "pages": [
+              "api-keys/create",
+              "api-keys/list",
+              "api-keys/revoke"
+            ]
+          },
+          {
+            "group": "Account",
+            "pages": [
+              "account/overview",
+              "account/profile",
+              "account/delete"
+            ]
+          },
+          {
+            "group": "Team",
+            "pages": [
+              "team/invite",
+              "team/roles",
+              "team/manage"
+            ]
+          },
+          {
+            "group": "Company",
+            "pages": [
+              "company/profile"
+            ]
+          },
+          {
+            "group": "Notifications",
+            "pages": [
+              "notifications/events",
+              "notifications/preferences"
+            ]
+          },
+          {
+            "group": "Billing",
+            "pages": [
+              "billing/plans",
+              "billing/usage"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Guides",
+        "groups": [
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/overview",
+              "guides/first-server",
+              "guides/improve-first-call",
+              "guides/cut-context-cost",
+              "guides/find-dead-tools",
+              "guides/local-development"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "openapi": {
+          "source": "https://mcpulse-production.up.railway.app/docs/openapi.json",
+          "directory": "api"
+        },
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api/introduction",
+              "api/quickstart"
+            ]
+          },
+          {
+            "group": "Concepts",
+            "pages": [
+              "api/concepts/authentication",
+              "api/concepts/ingest",
+              "api/concepts/date-ranges",
+              "api/concepts/nightly-pass",
+              "api/concepts/errors",
+              "api/concepts/rate-limits",
+              "api/concepts/versioning"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "MCP",
+        "groups": [
+          {
+            "group": "MCP",
+            "pages": [
+              "mcp/overview",
+              "mcp/connect",
+              "mcp/auth",
+              "mcp/tools",
+              "mcp/playbooks",
+              "mcp/troubleshooting"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Changelog",
+        "groups": [
+          {
+            "group": "Releases",
+            "pages": [
+              "changelog/2026-08"
+            ]
+          }
+        ]
+      }
     ]
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "github": "https://github.com/getmcpulse",
+      "npm": "https://www.npmjs.com/package/@mcpulse/sdk"
     }
   }
 }

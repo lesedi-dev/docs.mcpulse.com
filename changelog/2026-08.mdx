@@ -1,0 +1,46 @@
+---
+title: "August 2026"
+description: "Release notes for MCPulse."
+---
+
+<Update label="2026-08-14" description="Documentation">
+
+### These docs
+
+The product, the REST API, the SDK and the MCP server, documented. Every threshold and default on these pages is read from the code rather than restated from memory — see `AGENTS.md` in this repository for which file settles what.
+
+</Update>
+
+<Update label="2026-08-14" description="MCP server">
+
+### MCPulse is now an MCP server
+
+You can connect Claude, Claude Code, Cursor or any OAuth-capable MCP client and ask about your own servers directly. Six read-only tools: `list_mcps`, `get_overview`, `list_tools`, `get_tool`, `get_insights`, `get_sessions`.
+
+**Six tools rather than one per metric.** Every registered tool costs its schema in the context window of every session, which is metric 15 and the dead-tool insight — sixteen near-identical tools over one rollup query would have earned MCPulse its own warnings. So narrowing is a parameter: `get_overview({ metrics: ["calls"] })` returns calls and nothing else.
+
+Two arguments exist specifically because a model is not a date picker. `mcp` accepts a **name** as well as an id, so "how is the orders server doing" needs no lookup first — and ambiguity is an error rather than a guess. `last_days` accepts a count, because a model asked for "the last 30 days" would otherwise have to know today's date and do arithmetic, and one that is a day out reports a number that is quietly wrong rather than visibly broken.
+
+Auth is OAuth 2.1 with PKCE, with Supabase as the authorization server and MCPulse as a resource server only. See [MCP authentication](/mcp/auth).
+
+Every figure comes from the same services the dashboard reads. No metric is computed in the MCP layer, because there is none that could be.
+
+</Update>
+
+<Update label="2026-08-14" description="Initial release">
+
+### MCPulse
+
+Analytics for MCP servers, in three pieces.
+
+**`@mcpulse/sdk`** — one import, one wrap, no runtime dependencies. Records what each tool call did and posts it in batches. Never throws, never blocks, and never sends arguments or results. See [Install the SDK](/sdk/install).
+
+**The API** — ingest, the metric services, and the account surface. Every number is computed server-side so that the dashboard and the MCP server get the same answer without either re-deriving it.
+
+**The dashboard** — the overview, tool health, tool detail, insights, keys and settings.
+
+The sixteen metrics: calls per tool, calls per day, which client, crashes, tool errors, bad arguments, empty answers, speed, result size, sessions, cost per session, retries, first-call success, tool pairs, schema size and dead tools.
+
+Three of them — retries, first-call success and tool pairs — are computed by a [nightly pass](/api/concepts/nightly-pass) and lag a day, because they are questions about a sequence rather than about a call.
+
+</Update>

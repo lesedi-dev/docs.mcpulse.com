@@ -1,0 +1,56 @@
+---
+title: "Latency"
+description: "Four buckets rather than a stored percentile, why that is the right shape, and what p95 means here."
+---
+
+Latency is stored as **four disjoint counters**, not as a percentile.
+
+| Bucket | Range |
+|---|---|
+| `ms_under_100` | Under 100ms |
+| `ms_under_500` | 100–500ms |
+| `ms_under_2000` | 500ms–2s |
+| `ms_over_2000` | Over 2s |
+
+Disjoint, not cumulative: a 300ms call is counted in `100–500ms` only.
+
+## Why buckets
+
+**Percentiles cannot be summed.** Storing a p95 per day and averaging it across a month gives a number that is not the p95 of anything.
+
+Four disjoint counters *can* be summed, and they aggregate correctly across any date range and any set of tools. A histogram of four buckets is enough to answer the question anyone actually has — *is this tool slow?* — without pretending to a precision the storage does not have.
+
+## What p95 means here
+
+The **p95 latency** card walks the cumulative counts to find the bucket holding the 95th-percentile call, and reports **that bucket's upper edge**.
+
+So a p95 of `500ms` means "the 95th-slowest call is somewhere in the 100–500ms band" — an upper bound, not the value itself. Interpolating inside the bucket would invent precision the four counters do not have.
+
+The top bucket is open-ended, so a p95 that lands there has no numeric edge and reads as `>2s`.
+
+With no calls at all, the card reads a dash rather than zero — an absent measurement, not a fast one.
+
+## The distribution chart
+
+The same four counters as a chart, with shares that sum to 1. Rendered on the overview server-wide and on each [tool page](/tools/detail) scoped to that tool, from the same component and the same shape.
+
+## Reading it
+
+The bucket that matters most is `>2s`. Two seconds is roughly where an agent's user starts noticing it is waiting, and the [slow tool insight](/insights/slow-tool) fires when more than **10%** of a tool's calls land there.
+
+A long tail of slow calls with a fast p50 is usually one of:
+
+- an unbounded query that gets slow with large inputs
+- a cold cache or a cold connection pool
+- an upstream API you do not control, on its own bad days
+
+The distribution tells the three apart better than any single number: the first spreads across buckets as inputs grow, the second is a thin spike, the third is bursty over the [calls per day](/metrics/calls) chart.
+
+## Latency and cost are the two where rising is bad
+
+The delta on the p95 card colours a rise as bad, while the arrow follows the actual change. That verdict is decided API-side rather than in the interface, so the [REST API](/api/introduction) and the [MCP tools](/mcp/tools) reach the same conclusion without re-deriving it.
+
+## Related
+
+- [Response size](/metrics/response-size) — the other per-call cost of an answer
+- [Slow tool insight](/insights/slow-tool)

@@ -1,0 +1,69 @@
+---
+title: "Find dead tools"
+description: "Tools your server registers and nobody calls, priced against the sessions paying for them."
+---
+
+A dead tool is registered in the [startup payload](/sdk/what-is-sent) and has no calls in the range you are looking at. It is not free: its schema is sent to the model at the start of **every** session.
+
+## 1. Find them
+
+Two places, same set:
+
+- [**Tool health**](/tools/health) — the **never used** badge, with the schema size beside it.
+- [**Insights**](/insights/dead-tool) — the same tools, priced: schema tokens × sessions in range, in dollars.
+
+## 2. Widen the range first
+
+This is the step people skip. The rule is scoped to what you are looking at, so a tool used once a month is dead in a 7-day window and alive in a 90-day one.
+
+Set the range to 90 days before deciding anything is genuinely unused.
+
+## 3. Work out why it is dead
+
+<AccordionGroup>
+  <Accordion title="It cannot be reached">
+    Check this first, because it is invisible from every other screen. If the tool requires an argument that no other tool's output provides — an internal id, a token, a cursor — the model has no path to a valid call.
+
+    Look at the [pairs](/metrics/tool-pairs) for your live tools: if nothing returns the value this tool needs, that is the whole answer.
+  </Accordion>
+
+  <Accordion title="The model does not know when to use it">
+    The most common cause. The description says what the tool *does* rather than what question it *answers*.
+
+    "Queries the reports table" tells a model nothing about when to reach for it. "Get a saved report by name, or list saved reports for a customer" does.
+  </Accordion>
+
+  <Accordion title="Another tool covers it">
+    A general search that also handles the specific case, so the specific tool never wins. Check whether the general tool's calls include the ones this tool was built for — if so, this one is redundant rather than undiscovered.
+  </Accordion>
+
+  <Accordion title="Nobody needs it">
+    Built for a workflow that did not materialise. Fine. Remove it.
+  </Accordion>
+</AccordionGroup>
+
+## 4. Pick one of three
+
+| | When |
+|---|---|
+| **Remove it** | Nobody needs it, or another tool covers it. The schema cost goes immediately. |
+| **Rewrite the description** | The model cannot find it. Lead with the question it answers. |
+| **Merge it** | It does something useful the model never reaches. Fold it into a neighbour as a parameter — one schema instead of two, and one fewer choice to get wrong. |
+
+Merging is usually right when the underlying work is genuinely valuable. It is what MCPulse's own [MCP server](/mcp/overview) does.
+
+## 5. Confirm
+
+Dead-tool status is computed live from the range, so a removed tool disappears from the list as soon as a client initialises against the new build and sends a fresh tool list.
+
+A tool whose description you rewrote reappears as an ordinary row the moment it is called once.
+
+<Note>
+  A tool you removed from your code keeps its last recorded schema size until a new startup payload replaces the list. Restart and connect a client to refresh it.
+</Note>
+
+## Related
+
+- [Dead tools](/tools/dead)
+- [Schema size](/metrics/schema-size)
+- [Cut context cost](/guides/cut-context-cost)

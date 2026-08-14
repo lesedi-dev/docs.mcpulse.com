@@ -1,0 +1,38 @@
+---
+title: "Notification preferences"
+description: "Per person, per account. An event × channel matrix on /settings/notifications."
+---
+
+`/settings/notifications` is a matrix: one row per [event](/notifications/events), one column per channel.
+
+| Channel | |
+|---|---|
+| **In-app** | A notification inside MCPulse |
+| **Email** | To your sign-in address |
+
+## They are yours, not the account's
+
+Preferences are stored per **person per account**, because two people in one account want different alerts. Changing yours changes nothing for anyone else.
+
+## Only what you changed is stored
+
+The stored value holds only the toggles you actually moved. Everything else falls through to that event's [default](/notifications/events), which the API owns.
+
+That matters when an event is added later: it arrives switched to its default for everyone, rather than silently off — which is what would happen if the stored blob were treated as the whole truth.
+
+## Unknown keys are dropped
+
+The saved value is a map, so anything sent that is not an event MCPulse publishes is discarded on write. Otherwise the table would accumulate whatever a client happened to send, and every later reader would have to guess whether an unfamiliar key was a retired event or someone's typo.
+
+## Reading them back
+
+`GET /v1/account/notifications` returns the **event catalogue as well as** the preferences, and the preferences are always complete — every event key present, defaults filled in. A client never has to know the defaults to render the matrix correctly.
+
+<Note>
+  Nothing sends yet. The toggles are recorded and will be honoured when delivery ships.
+</Note>
+
+## Related
+
+- [Notification events](/notifications/events)
+- [Your profile](/account/profile)

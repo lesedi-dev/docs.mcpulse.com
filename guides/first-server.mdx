@@ -1,0 +1,92 @@
+---
+title: "Instrument your first server"
+description: "From an empty account to real numbers on the overview, with a way to check each step actually worked."
+---
+
+This is the [quickstart](/quickstart) with the verification steps filled in — what to check after each stage, so a problem is found where it happened rather than three steps later.
+
+## 1. Create an MCP and mint a key
+
+<Steps>
+  <Step title="New MCP">
+    Name it after the server you are instrumenting. Creating it opens it.
+  </Step>
+  <Step title="Create key">
+    On the **Installation** page. Name it `production` or `laptop` — whatever you will recognise later.
+  </Step>
+  <Step title="Copy it now">
+    The full key is shown once. Only a hash and the first 12 characters are stored.
+  </Step>
+</Steps>
+
+**Check:** the key appears on `/m/:id/keys` with the name and prefix you expect.
+
+## 2. Wire it up
+
+```bash
+npm install @mcpulse/sdk
+```
+
+```bash .env
+MCPULSE_KEY=mp_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+```ts
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { watch } from "@mcpulse/sdk";
+
+const server = new McpServer({ name: "my-server", version: "1.0.0" });
+
+// … your registerTool calls …
+
+watch(server, { key: process.env.MCPULSE_KEY, debug: true });
+
+await server.connect(new StdioServerTransport());
+```
+
+Serving over streamable HTTP? The wrap goes inside the factory — see [Serving over HTTP](/sdk/http).
+
+**Check:** start the server with `debug: true` and look at **stderr**. You want `watching`. If you get `disabled — no key` or `not an MCP server`, stop here — [troubleshooting](/sdk/troubleshooting) covers both.
+
+## 3. Connect a client
+
+Point Claude Desktop, Cursor, or any MCP client at your server.
+
+**Check:** stderr shows `startup: N tools, client <name>`. That `N` should be the number of tools you registered. If it is lower, `watch()` ran before some of them were registered — move it below the last `registerTool`.
+
+## 4. Make some calls
+
+Use each tool at least once, including the ones you expect to be slow or to return nothing. The point of the first session is to prove every path reports.
+
+**Check the dashboard.** Within about five seconds:
+
+| Should appear immediately | Should be empty on day one |
+|---|---|
+| Total calls, calls per day | First-call success |
+| Outcome breakdown | Retries |
+| Latency distribution | Tool pairs |
+| Response sizes, cost | |
+
+Those three wait for the [nightly pass](/api/concepts/nightly-pass) at 02:00 UTC and are labelled *as of yesterday*. That is normal and nobody minds.
+
+## 5. Check the tool list is complete
+
+Open [tool health](/tools/health). Every tool you registered should be listed, including any that were never called — those come from the [startup payload](/sdk/what-is-sent) and carry their [schema size](/metrics/schema-size).
+
+A tool missing from the list either was not registered when `watch()` ran, or is registered under a different name than you think. The recorded name is what the client actually sent.
+
+## 6. Come back tomorrow
+
+The first genuinely useful reading is the day after the nightly pass has walked a full day of your traffic. That is when [first-call success](/metrics/first-call-success) and the [insights](/insights/overview) that depend on it appear.
+
+## Next
+
+<CardGroup cols={2}>
+  <Card title="Improve first-call success" icon="bullseye" href="/guides/improve-first-call">
+    The headline metric, once you have one.
+  </Card>
+  <Card title="Cut context cost" icon="coins" href="/guides/cut-context-cost">
+    Actionable from day one — response size is live.
+  </Card>
+</CardGroup>

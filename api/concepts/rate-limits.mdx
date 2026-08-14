@@ -1,0 +1,53 @@
+---
+title: "Rate limits"
+description: "10,000 payloads a minute per ingest key, counted in payloads rather than requests."
+---
+
+Ingest is limited to **10,000 payloads per minute, per key**.
+
+## Payloads, not requests
+
+A batch of 500 costs 500. Limiting requests instead would let one client send 500-item batches as fast as it liked and call it one unit of load.
+
+## Over the limit
+
+```
+HTTP/1.1 429 Too Many Requests
+retry-after: 34
+```
+
+`Retry-After` is in seconds and counts down to the end of the current window. The whole batch is refused — nothing is partially accepted.
+
+The SDK does not retry. A refused batch is dropped, which costs a data point and nothing else.
+
+## What that limit is actually worth
+
+10,000 payloads a minute is roughly **166 tool calls per second, sustained**, from one server. Given the SDK flushes at 30 items or 5 seconds, hitting it takes real traffic rather than a misconfiguration.
+
+If you are near it, split across [several keys](/api-keys/create) on the same MCP — one per deployment — since the limit is per key.
+
+## The window is per API instance
+
+The counter is in memory. That is fine on a single instance and becomes N× the intended limit the moment the API scales horizontally, at which point it moves to shared storage.
+
+Stated rather than pre-solved, so that the behaviour you observe matches the behaviour that is documented.
+
+## Reads are not limited
+
+Metric reads, account routes and the MCP endpoint carry no rate limit today. They are authenticated per user and bounded by what a person or an agent can plausibly ask for.
+
+## Other bounds
+
+| | |
+|---|---|
+| Batch size | 500 payloads, `413` above |
+| Tools per startup payload | 500 |
+| `GET /v1/mcps/{id}/sessions?limit=` | 1–500, default 100 |
+| MCP `get_sessions` limit | 1–200, default 100 |
+
+See [Ingest](/api/concepts/ingest) for the per-field limits.
+
+## Related
+
+- [Ingest](/api/concepts/ingest)
+- [Errors](/api/concepts/errors)

@@ -1,0 +1,59 @@
+---
+title: "Slow tool"
+description: "More than a tenth of these calls take over two seconds, and the agent is visibly waiting."
+---
+
+> 34% of `generate_report` calls take over 2 seconds (303 of 892).
+
+## When it fires
+
+| | |
+|---|---|
+| Condition | More than **10%** of calls in the `>2s` bucket |
+| Severity | **low** over 10%, **high** over 30% |
+| Minimum | 20 calls |
+| Lag | None — live |
+
+The severity jump is deliberately wide. A tool that is occasionally slow is a footnote; a tool that is slow a third of the time is the thing someone will complain about.
+
+## Why two seconds
+
+Two seconds is roughly where the person waiting on the agent notices they are waiting. Under it, the model's own generation time dominates and your tool is not the bottleneck. Over it, your tool is.
+
+The [latency buckets](/metrics/latency) are stored at exactly this boundary, so the rule reads a counter rather than approximating from a percentile.
+
+## Reading the distribution, not just the rate
+
+The four-bucket [distribution](/metrics/latency) on the [tool page](/tools/detail) tells you which kind of slow you have:
+
+| Shape | Usual cause |
+|---|---|
+| Spread across all four buckets | An unbounded query — slower as inputs grow |
+| Fast, with a thin spike over 2s | A cold cache or a cold connection pool |
+| Bursty over the [calls-per-day](/metrics/calls) chart | An upstream you do not control, on its bad days |
+
+## The fixes
+
+<Steps>
+  <Step title="Bound the work">
+    A default limit does as much for latency as it does for [response size](/metrics/response-size). Both problems usually have the same cause.
+  </Step>
+  <Step title="Stop fetching what you do not return">
+    Loading a whole record to return three fields costs the fetch as well as the bytes.
+  </Step>
+  <Step title="Parallelise the fan-out">
+    A tool that makes four upstream calls in sequence takes as long as all four. Most of the time they do not depend on each other.
+  </Step>
+  <Step title="Return partial results rather than waiting">
+    A fast answer with a count of what was omitted usually beats a complete answer the model has stopped waiting for.
+  </Step>
+</Steps>
+
+## Slow and heavy together
+
+A tool with both this insight and [heavy payload](/insights/heavy-payload) almost always has one cause: it is returning too much, and fetching too much to return it. Fix the size and the latency usually follows.
+
+## Related
+
+- [Latency](/metrics/latency)
+- [Tool detail](/tools/detail)

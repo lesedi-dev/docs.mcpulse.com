@@ -1,0 +1,49 @@
+---
+title: "Outcomes"
+description: "How calls ended: ok, empty, bad_args, tool_error and crashed — and why empty is its own slice."
+---
+
+Every call ends as exactly one of four outcomes, recorded by the SDK. The breakdown splits them into **five** slices, because `ok` hides one.
+
+| Slice | Meaning | What it usually means |
+|---|---|---|
+| `ok` | Ran and returned something useful | Working |
+| `empty` | Ran, succeeded, returned nothing useful | A filter matched nothing, or an id did not exist |
+| `bad_args` | Arguments failed schema validation — your handler never ran | The model does not understand your input schema |
+| `tool_error` | Ran and returned `isError: true` | Your tool refused, on purpose |
+| `crashed` | Threw | A bug in your tool |
+
+## Why empty is split out
+
+A call that succeeded and returned nothing is the failure the outcome field hides. Burying it inside the green bar is exactly how it stays hidden — so `ok` is drawn as `ok − empties` and `empty` gets its own slice.
+
+Both the overview and the [tool page](/tools/detail) render this from the same function, so the two cannot disagree about what "ok" counts. See [Empty results](/metrics/empty-results).
+
+## crashed versus tool_error
+
+These look identical from outside `McpServer`, which catches everything a tool does and converts it into `{ isError: true }`. The SDK wraps your tool callbacks as well as the request handler so the difference survives.
+
+It matters because the two have opposite fixes:
+
+- `tool_error` — your tool decided to refuse. Often correct behaviour. Worth checking the model understands *why* it was refused.
+- `crashed` — your tool has a bug. Nothing about the model's behaviour will fix it.
+
+## bad_args is a description problem
+
+`bad_args` means the model constructed arguments your schema rejected, and your handler never ran. That is not a bug in your code; it is a gap between what your schema requires and what your description implies.
+
+A tool with a high `bad_args` share almost always has an under-described required field, an enum whose values are not listed, or a name that suggests something other than what it takes.
+
+## The error rate
+
+The **error rate** on the overview is `bad_args + tool_error + crashed` as a share of calls. `empty` is deliberately **not** in it — an empty result is a different failure with a different rate beside it.
+
+## Filtering
+
+Outcomes scope cleanly to a [tool filter](/metrics/overview): `tool_days` carries per-outcome counters per tool per day.
+
+## Related
+
+- [Empty results](/metrics/empty-results)
+- [First-call success](/metrics/first-call-success) — which counts `ok` and non-empty and un-retried
+- [Tool detail](/tools/detail) — the same breakdown for one tool

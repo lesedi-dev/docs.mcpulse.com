@@ -1,0 +1,73 @@
+---
+title: "Cut context cost"
+description: "Your server has two costs — what it returns per call, and what it charges every session before it is called. Both, in the order worth fixing."
+---
+
+Your server costs the people running it context, and context is paid for on every subsequent turn of a conversation. MCPulse prices it two ways because it arrives two ways.
+
+| Cost | Paid | Metric |
+|---|---|---|
+| **Response bytes** | Per call | [Response size](/metrics/response-size) |
+| **Schema bytes** | Per session, whether the tool runs or not | [Schema size](/metrics/schema-size) |
+
+Both convert at `bytes / 4` tokens and $3 per million input tokens, from one constant.
+
+## 1. Read cost per session first
+
+It is on the overview, and it is the number someone deciding whether to keep your server installed will quote back to you.
+
+It falls when either half falls: fewer bytes per call, or fewer calls per session. [Improving first-call success](/guides/improve-first-call) does the second, because a retried call is a call the session paid for twice.
+
+## 2. Fix the heavy tools
+
+Open [tool health](/tools/health) and look at **avg response** and the **heavy payload** badge, which fires above 10,000 bytes.
+
+Work down by calls × average bytes, not by average alone — a 40kB tool called twice matters less than a 12kB tool called nine hundred times. The [heavy payload insight](/insights/heavy-payload) states both figures for exactly this reason.
+
+Then, in the order they usually pay off:
+
+<Steps>
+  <Step title="Return fields, not records">
+    A row with 40 columns costs 40 columns of context. Return what the model needs to answer the next question, and offer a `get_x` for the full record.
+  </Step>
+  <Step title="Add a limit, and default it low">
+    A default of 10 with an explicit `limit` argument beats a default of 100. The model can ask for more and usually will not need to.
+  </Step>
+  <Step title="Stop pretty-printing">
+    `JSON.stringify(x, null, 2)` is more bytes than `JSON.stringify(x)`, and no model reads the indentation.
+  </Step>
+  <Step title="Stop echoing the request">
+    The model already has the arguments it sent. Returning them alongside results doubles small responses.
+  </Step>
+  <Step title="Summarise where a summary answers it">
+    A count plus five examples often beats four hundred rows — and if it does not, narrowing and asking again costs far less than the four hundred rows would have.
+  </Step>
+</Steps>
+
+## 3. Then fix the schema
+
+This is the cost that is invisible without instrumentation, because nothing in the protocol reports it back.
+
+Every registered tool is sent to the model at the **start of every session**. Forty tools averaging 400 bytes is 16kB — roughly 4,000 tokens — before a single question is answered, paid by every user, forever.
+
+- **[Dead tools](/guides/find-dead-tools) first.** Pure loss: schema cost, zero use.
+- **Then the largest schemas.** Over 1,500 bytes is worth a look — usually a deeply nested optional object or a long enum. Long *descriptions* are generally worth their bytes; deep optional nesting generally is not.
+- **Then the tool count itself.** Sixteen near-identical tools over one underlying query cost sixteen schemas every session and give the model sixteen chances to choose wrong.
+
+That last point is the argument for **narrowing as a parameter rather than as a name**. MCPulse's own [MCP server](/mcp/overview) registers six tools for sixteen metrics, and `get_overview({ metrics: ["calls"] })` returns calls and nothing else — one schema, one round trip, a small answer.
+
+## 4. Measure it
+
+Response size and cost are **live** — no nightly lag — so a deploy is visible as soon as traffic arrives.
+
+Set the range to the period after the change. The cost-per-session card compares against the preceding window of equal length, and treats a rise as the bad direction.
+
+<Note>
+  Under a [tool filter](/metrics/overview), cost per session goes blank. Sessions have no tool dimension, so there is no denominator to divide by. `total_cost_usd` still narrows.
+</Note>
+
+## Related
+
+- [Response size](/metrics/response-size)
+- [Schema size](/metrics/schema-size)
+- [Cost per session](/metrics/cost)

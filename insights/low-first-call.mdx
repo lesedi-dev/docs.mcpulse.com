@@ -1,0 +1,58 @@
+---
+title: "Low first-call success"
+description: "Agents struggle with this tool. What the rule measures, and the fixes in the order they usually work."
+---
+
+> Only 58% of calls to `search_orders` succeed first time. Agents retried it 1.4 times per call on average across 892 calls.
+
+## When it fires
+
+| | |
+|---|---|
+| Condition | First-call rate below **70%** |
+| Severity | **medium** under 70%, **high** under 50% |
+| Minimum | 20 calls on days the nightly pass has covered |
+| Lag | One day — see [the nightly pass](/api/concepts/nightly-pass) |
+
+The denominator is calls on covered days, not all calls in range. A tool whose calls all arrived today produces no insight rather than a false one.
+
+## What it means
+
+The model is calling your tool, not getting what it wanted, and calling it again with different arguments. See [First-call success](/metrics/first-call-success) for how a retry is distinguished from ordinary repetition.
+
+This is almost never a bug in the tool. It is a gap between what your tool *does* and what your description *implies* it does.
+
+## The fixes, in the order they usually work
+
+<Steps>
+  <Step title="Read the description as a stranger">
+    Does it say what question the tool answers, or what operation it performs? "Search orders by customer, date range or status" beats "Queries the orders table."
+  </Step>
+  <Step title="Check the outcome breakdown first">
+    A high `bad_args` share is a schema problem, not a description problem. A high `empty` share means the tool is succeeding at doing nothing. Each has a different fix, and the [breakdown](/metrics/outcomes) tells you which you have in one glance.
+  </Step>
+  <Step title="Name arguments after what they mean">
+    `status` beats `state_flag`. An enum with its values listed beats a free string. A date field with its format in the description beats one without.
+  </Step>
+  <Step title="Return errors that say what to do next">
+    An empty array tells a model nothing. `isError: true` with "no customer with that id — use search_customers first" tells it exactly what to do, and turns a retry into a correct second call.
+  </Step>
+  <Step title="Check the pairs">
+    If this tool is always preceded by another, the model may be gathering an argument it cannot get any other way. See [Tool pairs](/metrics/tool-pairs).
+  </Step>
+</Steps>
+
+## What not to do
+
+**Don't add more tools.** Splitting a struggling tool into three usually produces three struggling tools and three schemas, and gives the model three chances to pick wrong instead of one. See [Schema size](/metrics/schema-size).
+
+**Don't loosen the schema.** Accepting anything turns `bad_args` into `empty`, which moves the failure somewhere quieter without fixing it.
+
+## Checking the fix
+
+The metric lags a day, so a deploy today is measurable tomorrow. Compare the tool's rate over the week after against the week before — the [delta on the card](/metrics/overview) does that comparison for you when the range is set to the newer week.
+
+## Related
+
+- [Improve first-call success](/guides/improve-first-call)
+- [Outcomes](/metrics/outcomes)

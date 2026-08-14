@@ -1,0 +1,52 @@
+---
+title: "Create an MCP"
+description: "One MCP per server you want to track. What creating one does, and what happens next."
+---
+
+An **MCP** is one tracked server. Everything else in MCPulse hangs off it: the ingest keys, the tools, the rollups, the sessions, the insights.
+
+From the MCP list, click **New MCP**. The panel asks for one thing.
+
+<Steps>
+  <Step title="Name">
+    The name of the server you are about to instrument. It appears in the list, in the sidebar, and in the [MCP tools](/mcp/tools) when an agent asks for it by name.
+
+    It is the only field, and it is [renamable](/mcps/rename) later without affecting a single recorded call.
+  </Step>
+</Steps>
+
+Click **Create**. Two things follow.
+
+## Creating one opens it
+
+You are taken straight into the new MCP rather than back to the list. You named the thing; you meant to go there. Landing back on the list would mean finding the row you just made and clicking it.
+
+## The first overview is empty on purpose
+
+Nothing has been recorded yet, so every figure is zero and every chart draws a flat line along its axis. That is deliberate — a new MCP covered in dashes reads as a product that is broken rather than one that is waiting.
+
+The empty overview carries one prompt pointing at the install steps. It disappears the moment a payload arrives, rather than sitting above real numbers telling you to do what you have already done.
+
+<Note>
+  Creating an MCP requires the **admin** role or higher. A brand-new user with no account yet becomes the owner of one, so this path stays open on a first sign-in. See [Roles and permissions](/team/roles).
+</Note>
+
+## What to do next
+
+<Steps>
+  <Step title="Mint an ingest key">
+    On the **Installation** page. Named at creation, shown once. See [Create a key](/api-keys/create).
+  </Step>
+  <Step title="Install and wrap">
+    `npm install @mcpulse/sdk`, then one `watch()` call. See [Install the SDK](/sdk/install).
+  </Step>
+  <Step title="Restart and connect a client">
+    The startup payload goes out on `initialize` and calls flush within five seconds.
+  </Step>
+</Steps>
+
+## One MCP or several?
+
+One per server, not per environment — unless you want the environments measured separately, which is often the right call. Staging traffic mixed into production numbers moves the first-call rate for reasons that have nothing to do with your users.
+
+Each MCP can hold several keys, so `production` and `staging` reporting into the same MCP is also possible. It is a question of whether you want one set of figures or two.
