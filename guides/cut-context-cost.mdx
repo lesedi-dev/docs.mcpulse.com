@@ -54,7 +54,7 @@ Every registered tool is sent to the model at the **start of every session**. Fo
 - **Then the largest schemas.** Over 1,500 bytes is worth a look — usually a deeply nested optional object or a long enum. Long *descriptions* are generally worth their bytes; deep optional nesting generally is not.
 - **Then the tool count itself.** Sixteen near-identical tools over one underlying query cost sixteen schemas every session and give the model sixteen chances to choose wrong.
 
-That last point is the argument for **narrowing as a parameter rather than as a name**. MCPulse's own [MCP server](/mcp/overview) registers six tools for sixteen metrics, and `get_overview({ metrics: ["calls"] })` returns calls and nothing else — one schema, one round trip, a small answer.
+That last point is the argument for **narrowing as a parameter rather than as a name**. MCPulse's own [MCP server](/mcp/overview) covers all sixteen metrics with five tools, and `get_overview({ metrics: ["calls"] })` returns calls and nothing else — one schema, one round trip, a small answer.
 
 ## 4. Measure it
 

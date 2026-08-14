@@ -69,9 +69,11 @@ Every one of these is enforced in the API, not in the interface. Hiding a button
 
 See [Roles and permissions](/team/roles).
 
-## MCP access is read-only
+## MCP access runs the same guards
 
-The MCP endpoint registers six tools and none of them write. Nothing there mints a key, renames an MCP or touches the team — not because a hint says so, but because no such tool exists to call. See [MCP tools](/mcp/tools).
+The MCP endpoint registers 24 tools, and 10 of them write — 7 that change something and 3 that remove it. That is not a second permission surface: every one calls the same service function the REST route calls and hits the same guard, so a member is refused over MCP exactly as they are over HTTP.
+
+Two writes deliberately do not exist. There is no `create_key`, because the full key would land in a model's context and from there in transcripts and provider logs. There is no `delete_account`, because a typed-name confirmation proves nothing when the model already read the name a moment earlier. See [MCP tools](/mcp/tools).
 
 ## Retention and deletion
 

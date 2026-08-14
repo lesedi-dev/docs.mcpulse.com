@@ -12,17 +12,21 @@ MCPulse is analytics for MCP servers, and it is one. Connect an AI client and as
 | **Transport** | Streamable HTTP at `/mcp` |
 | **Auth** | OAuth 2.1 with PKCE. You approve it on a consent screen; nothing is copied or pasted |
 | **Scope** | Every call is scoped to the signed-in account |
-| **Writes** | **None.** Six tools, all read-only |
+| **Tools** | 24 — 14 read, 7 write, 3 destructive |
 
 Every number comes from the **same services the dashboard reads**. There is no metric computed in the MCP layer, because there is no metric that could be — which is the whole reason the logic lives in services.
 
-## Read-only, and enforced rather than promised
+## Writes are the API's guards, not new ones
 
-Nothing here mints a key, renames an MCP, invites anyone or deletes anything — not because a hint says so, but because **no such tool is registered**.
+The connector can create and rename MCPs, invite and remove teammates, revoke keys and edit the company — everything the dashboard can do except ingest.
 
-The tools carry `readOnlyHint`, which tells a client it may call them without asking. The absence of write tools is what makes that true.
+None of that needed new permission code. Every tool calls the same service function the REST route calls and hits the same guard, so a **member** is refused with the same sentence they would get in the dashboard. That is the return on "routes are thin, logic lives in services": the hidden button was never the control.
 
-## Six tools, not sixteen
+Tools carry `readOnlyHint`, `destructiveHint` or neither, so your client knows what to confirm. Those are hints to the client; the guard underneath is the enforcement.
+
+Two writes deliberately do **not** exist — minting a key and deleting the account. [Tools](/mcp/tools) says why.
+
+## Five metric tools, not sixteen
 
 The obvious design is one tool per metric — `get_calls`, `get_retries`, `get_p95` — so that every question has an obviously named tool.
 
@@ -34,16 +38,13 @@ The other half of that decision: the default response is a **summary**. The bulk
 
 ## The tools
 
-| Tool | |
+| Group | Tools |
 |---|---|
-| `list_mcps` | Every MCP on the account, with 7-day calls and first-call success |
-| `get_overview` | Headline metrics for one MCP, narrowed by `metrics` and `tools` |
-| `list_tools` | Every tool with its health figures — find which tool is the problem |
-| `get_tool` | One tool in detail |
-| `get_insights` | What is actually wrong, as sentences with numbers |
-| `get_sessions` | Sessions, cost per session, and the most recent ones |
+| **MCPs and keys** | `list_mcps` `get_mcp` `create_mcp` `rename_mcp` `delete_mcp` `list_keys` `revoke_key` |
+| **Metrics** | `get_overview` `list_tools` `get_tool` `get_insights` `get_sessions` |
+| **Account and team** | `get_account` `get_usage` `list_members` `invite_member` `change_member_role` `remove_member` `get_profile` `update_profile` `get_company` `update_company` `get_notifications` `update_notifications` |
 
-See [Tools](/mcp/tools) for the full signatures.
+See [Tools](/mcp/tools) for arguments, annotations and the two deliberate omissions.
 
 ## Next steps
 

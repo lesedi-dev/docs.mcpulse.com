@@ -79,6 +79,42 @@ for each, with the number that justifies it.
 
 `list_mcps`, then `get_insights` per MCP.
 
+## Setting a server up
+
+```
+Create an MCP called "Acme Orders" on MCPulse, then tell me how to install the SDK.
+```
+
+`create_mcp`, then the agent should send you to the dashboard for the key — there is no `create_key` tool, deliberately. See [Tools](/mcp/tools).
+
+## Housekeeping
+
+```
+Rename "staging" to "Acme Staging", and revoke the key with prefix mp_live_a1b2.
+```
+
+`rename_mcp`, then `revoke_key`. A key is addressed by its **prefix**, which is what `list_keys` shows — an ambiguous prefix is refused rather than guessed, because revoking the wrong key is a silent outage.
+
+```
+Invite ada@example.com as an admin — her name is Ada Lovelace.
+```
+
+`invite_member`. Give the name: without it the team list shows an address where a person should be.
+
+## Writes and confirmation
+
+Three tools are marked destructive, and your client should confirm before calling them: `delete_mcp`, `revoke_key` and `remove_member`.
+
+Two things worth knowing before you let an agent loose:
+
+**Your role still applies.** A member's agent can read every number and change nothing, refused with the same sentence the dashboard would give. See [Roles and permissions](/team/roles).
+
+**`update_notifications` replaces rather than merges.** Ask the agent to read the current settings first, or every event it leaves out silently falls back to its default:
+
+```
+Turn off email for the weekly summary but leave everything else as it is.
+```
+
 ## Prompting notes
 
 **Name the server.** The tools resolve an MCP by name, so "the orders server" saves a `list_mcps` round trip. Two MCPs with the same name are refused rather than guessed at.
@@ -86,6 +122,8 @@ for each, with the number that justifies it.
 **Say the window.** "This week", "the last 90 days", "March" all work. Without one you get the last 30 days.
 
 **Ask for one metric when you want one metric.** `metrics: ["calls"]` is one small answer; the whole overview is many. A good agent narrows on its own, and saying so helps.
+
+**Say what you want changed, not how.** The connector covers everything the dashboard does except ingest, minting a key and deleting the account. If an agent says it cannot do something, check your role before assuming the tool is missing.
 
 **Expect a day's lag on three figures.** First-call success, retries and tool pairs come from the [nightly pass](/api/concepts/nightly-pass). An agent reading `nightly_as_of` will say so.
 

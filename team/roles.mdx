@@ -27,7 +27,7 @@ This is worth stating plainly because the opposite was true once and it was wron
 
 The dashboard hides controls your role does not permit. That is a **courtesy**, not a permission — every guard is also enforced server-side, on the endpoint. A member calling the API directly gets a `403`, not a rename.
 
-The [MCP server](/mcp/overview) gets only the read gate, which is why it registers no write tools at all.
+The [MCP server](/mcp/overview) reaches the same guards by calling the same services, so an agent acting on your behalf is bound by your role exactly as the dashboard is.
 
 ## Three rules that are easy to get wrong
 

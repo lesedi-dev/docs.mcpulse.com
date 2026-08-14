@@ -1,124 +1,132 @@
 ---
 title: "Tools"
-description: "Six read-only tools, their arguments, and when to reach for each."
+description: "24 tools across MCPs, metrics and the account — what each takes, which ones write, and the two that deliberately don't exist."
 ---
 
-All six are read-only and idempotent. None writes anything.
+The MCP server registers **24 tools**: everything the dashboard can do except ingest, which is your own server talking and has no business being reachable by an agent.
+
+| | Count | |
+|---|---|---|
+| **Read** | 14 | Safe to call without asking |
+| **Write** | 7 | Creates or changes something; undoable by hand |
+| **Destructive** | 3 | Removes something; your client should confirm first |
+
+The three destructive ones are `delete_mcp`, `revoke_key` and `remove_member`.
+
+## Permissions are the API's, not the connector's
+
+Nothing in the MCP layer decides who may do what. Every tool calls the same service function the REST route calls, and hits the same guard — `assertMcpWriteAccess`, or an account role check.
+
+So a **member** asking an agent to delete an MCP gets refused with the same sentence they would get in the dashboard, and an **admin** acting on an **owner** gets refused for the same reason. Exposing writes over MCP needed no new permission code. See [Roles and permissions](/team/roles).
+
+<Note>
+  Annotations are hints to your **client**, not enforcement. A client may call a read tool without asking and will usually confirm a destructive one. The enforcement is the service guard underneath, which no hint can bypass.
+</Note>
 
 ## Shared arguments
 
-Every tool except `list_mcps` takes an MCP, and every metric tool takes a range.
+Four inputs recur, and three of them take a human-readable handle rather than an id.
 
-| Argument | |
+| Argument | Accepts |
 |---|---|
-| `mcp` | The MCP, **by name or id**. Names match case-insensitively |
-| `last_days` | Window ending today, 1–365. Ignored when `from`/`to` are given |
-| `from` / `to` | `YYYY-MM-DD`, UTC, inclusive |
+| `mcp` | Name or id. Names match case-insensitively |
+| `member` | **Email address** or member id |
+| `key` | The `mp_live_…` **prefix** or the key id |
+| range | `last_days` (1–365), or `from`/`to` as `YYYY-MM-DD` |
 
-`last_days` exists because it is what a model actually has. Asked for "the last 30 days" with only dates available, a model has to know today and do arithmetic — and one that is a day out reports a number that is quietly wrong rather than visibly broken. A count cannot be off by one.
+Each resolver refuses ambiguity rather than guessing, and each error lists the valid options so a model can retry correctly instead of reporting a dead end.
 
-Explicit dates still win when given. "March" is a real question and no number of days expresses it.
+- **Email** for a member, because that is what someone says out loud — "remove ada@…" — and because it is the only stable handle for an invited person, who has no user id until they first sign in.
+- **Prefix** for a key, because the key itself is hashed and never stored, so the prefix is all a list can show. An ambiguous prefix is refused: revoking the wrong key is a silent outage that looks like the SDK breaking.
 
-Omitting all three gives the last 30 days. See [Date ranges](/api/concepts/date-ranges).
-
-### Resolving an MCP by name
-
-Ambiguity is an **error rather than a guess**. Two MCPs called `staging` would otherwise report one server's numbers under the other's name — a wrong answer that looks exactly like a right one. The error names both ids.
-
-An unknown name comes back with the list of names that do exist, so the model can retry correctly rather than reporting a dead end.
+`last_days` exists because it is what a model actually has. Asked for "the last 30 days" with only dates available, a model must know today and do arithmetic — and one that is a day out reports a number that is quietly wrong rather than visibly broken. Explicit dates still win when given. Omitting all three gives the last 30 days. See [Date ranges](/api/concepts/date-ranges).
 
 ---
 
-## list_mcps
+## MCPs and keys
 
-Every MCP on the account, with calls in the last 7 days and first-call success.
+| Tool | | |
+|---|---|---|
+| `list_mcps` | Read | Every MCP on the account, with 7-day calls and first-call success |
+| `get_mcp` | Read | One MCP's name and creation date. For its numbers use `get_overview` |
+| `create_mcp` | Write | Add an MCP. Takes `name` |
+| `rename_mcp` | Write | Change the display name. The id, keys and data are untouched |
+| `delete_mcp` | **Destructive** | Removes the MCP and its keys, events, rollups and sessions |
+| `list_keys` | Read | Name, prefix, created, revoked. Never the key itself |
+| `revoke_key` | **Destructive** | Stops a key working immediately |
 
-No arguments.
+`create_mcp` returns the MCP with its id but **no ingest key** — see below. `delete_mcp` cannot be undone and the data is not recoverable, so confirm with the user first.
 
-Start here when the user names a server you have not seen, or asks what they have.
+`revoke_key` is worth a specific warning: any server still using that key stops reporting, and [the SDK swallows the failure](/sdk/troubleshooting), so nobody gets an error — the data simply stops.
 
----
+## Metrics
 
-## get_overview
+| Tool | | |
+|---|---|---|
+| `get_overview` | Read | Headline metrics, narrowed by `metrics` and `tools` |
+| `list_tools` | Read | Every tool with its health figures |
+| `get_tool` | Read | One tool in detail |
+| `get_insights` | Read | What is wrong, with numbers |
+| `get_sessions` | Read | Sessions and cost per session. `limit` 1–200, default 100 |
 
-Headline metrics for one MCP.
+### Narrowing get_overview
 
-| Argument | |
-|---|---|
-| `mcp` | Required |
-| `metrics` | Which metrics to return. Omit for the summary figures |
-| `tools` | Narrow to these tool names |
-| range | `last_days`, or `from`/`to` |
+`metrics` takes any of:
 
-### metrics
-
-**Summary metrics**, returned when `metrics` is omitted:
-
+**Summary** — returned when `metrics` is omitted:
 `calls` · `first_call_success` · `latency` · `cost` · `sessions` · `outcomes` · `response_size`
 
-**Detail metrics**, returned only when named — each is an array long enough to swamp an answer:
-
+**Detail** — returned only when named, because each is an array long enough to swamp an answer:
 `daily` · `tools` · `clients` · `follows` · `sparklines`
 
-Ask for only what was wanted. `metrics: ["calls"]` returns calls and nothing else; prefer that over pulling the whole overview and reading one field out of it.
+Ask for only what was wanted. `metrics: ["calls"]` returns calls and nothing else; prefer that over pulling the whole overview to read one field.
 
-Three fields are **always** present, because without them every figure is a number with no idea what it is a number of: `range`, `nightly_as_of`, `filters`.
+`range`, `nightly_as_of` and `filters` are always present — without them every figure is a number with no idea what it is a number of.
 
-### tools
+With a `tools` filter on, `sessions` and cost per session come back `null`. A session belongs to the server, not to a tool. See [The overview](/metrics/overview).
 
-With a tool filter on, `sessions` and cost per session come back `null`. A session belongs to the server, not to a tool. See [The overview](/metrics/overview).
+## Account and team
 
----
+| Tool | | |
+|---|---|---|
+| `get_account` | Read | The account and the caller's role in it |
+| `get_usage` | Read | MCPs, events and team size against the plan |
+| `list_members` | Read | Everyone, arrived or not |
+| `invite_member` | Write | By `email`, with `role` and `full_name` |
+| `change_member_role` | Write | Promote or demote |
+| `remove_member` | **Destructive** | Removes someone, or withdraws an invitation |
+| `get_profile` | Read | The caller's own name and email |
+| `update_profile` | Write | Set or clear your own name |
+| `get_company` | Read | The account's company details |
+| `update_company` | Write | Change them. The only place the account name can be set |
+| `get_notifications` | Read | Preferences plus the event catalogue |
+| `update_notifications` | Write | Replaces the preference map |
 
-## list_tools
+Three details that change what an agent should do:
 
-Every tool on one MCP with calls, first-call rate, average response size, p95 latency and schema size — the [tool health table](/tools/health).
+**`invite_member` — ask for the name.** Without `full_name` the team list shows an address where a person should be, until they sign in and fill in their own profile.
 
-| Argument | |
-|---|---|
-| `mcp` | Required |
-| range | `last_days`, or `from`/`to` |
+**`update_profile` — `null` clears, omitting changes nothing.** They are different instructions.
 
-Use this to find **which** tool is the problem; use `get_tool` once you know.
-
----
-
-## get_tool
-
-One tool in detail: outcome breakdown, latency distribution, retries, first-call success, response size, and which tools get called alongside it.
-
-| Argument | |
-|---|---|
-| `mcp` | Required |
-| `tool` | The tool name, exactly as the server registered it |
-| range | `last_days`, or `from`/`to` |
+**`update_notifications` replaces, it does not merge.** Call `get_notifications` first and send it back changed, or every event you leave out falls back to its default. The event keys are enumerated in the schema, so a model can see the valid options rather than guessing one and being silently ignored.
 
 ---
 
-## get_insights
+## Two tools that deliberately don't exist
 
-What is actually wrong, as sentences with numbers: low first-call success, heavy payloads, silent empty results, dead tools, slow tools.
+### No `create_key`
 
-| Argument | |
-|---|---|
-| `mcp` | Required |
-| range | `last_days`, or `from`/`to` |
+Every other write is reachable over MCP because an agent doing it is the point. Minting a key is the exception.
 
-This is the tool to reach for when someone asks **how their server is doing** rather than for a specific figure. See [Insights](/insights/overview).
+The full key exists exactly once, in the response — and a tool result goes straight into a model's context, and from there into a conversation transcript, a provider's logs, and whatever the model says next. That is a credential leaked to three places nobody audited, to save one visit to the dashboard.
 
----
+Keys are made on `/m/:id/keys`, shown once, and never again. `list_keys` and `revoke_key` stay, because a prefix is not a secret and revoking is the thing you want to do in a hurry. See [Create a key](/api-keys/create).
 
-## get_sessions
+### No `delete_account`
 
-Sessions in range with calls, bytes and cost per session, plus the most recent ones.
+It was built with the dashboard's own safeguard — type the account name — and removed anyway, because that safeguard is the wrong shape here. In the dashboard a person types the name into a box. Over MCP a model would already be holding the name, having read it from `get_account` a moment earlier, so the one thing the confirmation was supposed to prove is the one thing it cannot.
 
-| Argument | |
-|---|---|
-| `mcp` | Required |
-| `limit` | Recent sessions to return, 1–200. Default 100 |
-| range | `last_days`, or `from`/`to` |
-
-Counted by start time rather than summed per day, so a session crossing midnight stays one.
+It is the only action in the product with nothing to come back from. That belongs behind a person and a screen: [`/settings/my-account`](/account/delete).
 
 ---
 
@@ -126,11 +134,12 @@ Counted by start time rather than summed per day, so a session crossing midnight
 
 Two kinds, treated oppositely.
 
-A **caller error** is repeated verbatim, because it is actionable: *"No MCP named 'orders'. Yours are: Acme Orders, Staging"* is something a model can act on, and it will retry correctly.
+A **caller error** is repeated verbatim, because it is actionable — *"No MCP named 'orders'. Yours are: Acme Orders, Staging"*, or *"This action requires the admin role"*. A model can act on both. Permission messages carry most of the weight now that writes exist: a refused write should say why rather than fail obscurely.
 
-Anything else returns *"Internal error. The failure has been logged."* Database errors carry column names, constraint names and sometimes values — and a tool result goes somewhere worse than a log, into a model's context and from there into whatever it says next.
+Anything else returns *"Internal error. The failure has been logged."* Database errors carry column names, constraint names and sometimes values, and a tool result goes somewhere worse than a log.
 
 ## Related
 
 - [Playbooks](/mcp/playbooks)
+- [Roles and permissions](/team/roles)
 - [Troubleshooting](/mcp/troubleshooting)

@@ -15,9 +15,13 @@ The product, the REST API, the SDK and the MCP server, documented. Every thresho
 
 ### MCPulse is now an MCP server
 
-You can connect Claude, Claude Code, Cursor or any OAuth-capable MCP client and ask about your own servers directly. Six read-only tools: `list_mcps`, `get_overview`, `list_tools`, `get_tool`, `get_insights`, `get_sessions`.
+You can connect Claude, Claude Code, Cursor or any OAuth-capable MCP client and work on your own servers directly. **24 tools** — 14 read, 7 write, 3 destructive — covering everything the dashboard does except ingest.
 
-**Six tools rather than one per metric.** Every registered tool costs its schema in the context window of every session, which is metric 15 and the dead-tool insight — sixteen near-identical tools over one rollup query would have earned MCPulse its own warnings. So narrowing is a parameter: `get_overview({ metrics: ["calls"] })` returns calls and nothing else.
+**Writes needed no new permission code.** Every tool calls the same service function the REST route calls and hits the same guard, so a member is refused over MCP with the same sentence the dashboard gives them. That is the return on "routes are thin, logic lives in services".
+
+**Two writes deliberately do not exist.** No `create_key`: the full key exists once, in the response, and a tool result goes into a model's context and from there into transcripts and provider logs. No `delete_account`: it was built with the dashboard's type-the-name safeguard and removed anyway, because a model already holds the name from `get_account`, so the one thing the confirmation was meant to prove is the one thing it cannot.
+
+**Five metric tools rather than one per metric.** Every registered tool costs its schema in the context window of every session, which is metric 15 and the dead-tool insight — sixteen near-identical tools over one rollup query would have earned MCPulse its own warnings. So narrowing is a parameter: `get_overview({ metrics: ["calls"] })` returns calls and nothing else.
 
 Two arguments exist specifically because a model is not a date picker. `mcp` accepts a **name** as well as an id, so "how is the orders server doing" needs no lookup first — and ambiguity is an error rather than a guess. `last_days` accepts a count, because a model asked for "the last 30 days" would otherwise have to know today's date and do arithmetic, and one that is a day out reports a number that is quietly wrong rather than visibly broken.
 

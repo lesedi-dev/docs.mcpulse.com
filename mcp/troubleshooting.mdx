@@ -58,10 +58,22 @@ description: "What the common errors mean, and where each one is actually coming
     Drop the filter to get them. See [The overview](/metrics/overview).
   </Accordion>
 
-  <Accordion title="The agent cannot write anything">
-    Correct, and permanent. The MCP server registers six read-only tools and no others. Nothing there mints a key, renames an MCP or touches the team.
+  <Accordion title="A write is refused — 'This action requires the admin role'">
+    Working as intended. Writes run the same role guards as the REST API, so a **member** can read every number and change nothing. Other sentences from the same family: "Only an owner can do this to another owner", "This is the only owner — promote someone else first", "You cannot do this to yourself".
 
-    Use the dashboard or the [REST API](/api/introduction) for writes.
+    See [Roles and permissions](/team/roles). Whoever owns the account can promote you.
+  </Accordion>
+
+  <Accordion title="There is no tool to create a key or delete the account">
+    Deliberate, and not coming. A minted key would land in the model's context and from there in transcripts and provider logs. A typed-name confirmation for account deletion proves nothing when the model already read the name from `get_account`.
+
+    Both live in the dashboard: [keys](/api-keys/create), [account deletion](/account/delete). See [Tools](/mcp/tools).
+  </Accordion>
+
+  <Accordion title="The client confirms every call, even reads">
+    Your client is ignoring `readOnlyHint`. The 14 read tools carry it and should not prompt; `delete_mcp`, `revoke_key` and `remove_member` carry `destructiveHint` and should.
+
+    Annotations are hints — a client is free to confirm everything. Check its tool-approval settings.
   </Accordion>
 </AccordionGroup>
 
